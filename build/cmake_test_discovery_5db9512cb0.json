@@ -1,0 +1,211 @@
+{
+  "tests": 35,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "ParserTest",
+      "tests": 12,
+      "testsuite": [
+        {
+          "name": "SelectStar",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 175
+        },
+        {
+          "name": "SelectColumns",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 183
+        },
+        {
+          "name": "WhereEqual",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 191
+        },
+        {
+          "name": "WhereGreaterThan",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 200
+        },
+        {
+          "name": "WhereLessThan",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 208
+        },
+        {
+          "name": "WhereAnd",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 215
+        },
+        {
+          "name": "WhereOr",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 224
+        },
+        {
+          "name": "WhereNot",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 231
+        },
+        {
+          "name": "TrailingSemicolon",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 239
+        },
+        {
+          "name": "EmptyQueryThrows",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 245
+        },
+        {
+          "name": "InvalidSQLThrows",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 250
+        },
+        {
+          "name": "MultilineQuery",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 255
+        }
+      ]
+    },
+    {
+      "name": "SemanticTest",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "ValidQuery",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 268
+        },
+        {
+          "name": "UnknownTable",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 276
+        },
+        {
+          "name": "UnknownColumn",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 284
+        },
+        {
+          "name": "UnknownWhereColumn",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 292
+        },
+        {
+          "name": "ValidAndPredicate",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 300
+        }
+      ]
+    },
+    {
+      "name": "PlannerTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "LogicalPlanHasFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 312
+        },
+        {
+          "name": "LogicalPlanNoFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 326
+        },
+        {
+          "name": "PhysicalPlanColumns",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 338
+        }
+      ]
+    },
+    {
+      "name": "FHEFixture",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "EncryptedLiteralNotEmpty",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 358
+        },
+        {
+          "name": "QueryPackageRoundTrip",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 364
+        },
+        {
+          "name": "ValidatorAcceptsValidPackage",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 393
+        },
+        {
+          "name": "ValidatorRejectsUnknownTable",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 418
+        },
+        {
+          "name": "ValidatorRejectsWrongProtocol",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 431
+        }
+      ]
+    },
+    {
+      "name": "E2ETest",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "EqualityFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 448
+        },
+        {
+          "name": "GreaterThanFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 456
+        },
+        {
+          "name": "LessThanFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 462
+        },
+        {
+          "name": "AndFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 468
+        },
+        {
+          "name": "AndFilterNoMatch",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 475
+        },
+        {
+          "name": "OrFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 481
+        },
+        {
+          "name": "NotFilter",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 487
+        },
+        {
+          "name": "NoWhereClause",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 493
+        },
+        {
+          "name": "PrimaryQuery",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 498
+        },
+        {
+          "name": "ResultBatchSerialization",
+          "file": "\/home\/yeager404\/Workspace\/OpenFHE\/Prototype 2\/tests\/test_proto2.cpp",
+          "line": 507
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+if(EXISTS "/home/yeager404/Workspace/OpenFHE/Prototype 2/build/prototype2_tests[1]_tests.cmake")
+  include("/home/yeager404/Workspace/OpenFHE/Prototype 2/build/prototype2_tests[1]_tests.cmake")
+else()
+  add_test(prototype2_tests_NOT_BUILT prototype2_tests_NOT_BUILT)
+endif()
