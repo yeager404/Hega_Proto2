@@ -76,8 +76,11 @@ void QueryValidator::validatePredTree(const QueryPackage& pkg,
         }
 
         case PredNodeKind::Equal:
+        case PredNodeKind::NotEqual:
         case PredNodeKind::GreaterThan:
         case PredNodeKind::LessThan:
+        case PredNodeKind::GreaterEqual:
+        case PredNodeKind::LessEqual:
             if (node.left == UINT32_MAX || node.right == UINT32_MAX)
                 throw ValidationError("Binary predicate node missing children");
             validatePredTree(pkg, node.left, schema);

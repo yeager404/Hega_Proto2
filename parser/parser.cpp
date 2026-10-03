@@ -1,7 +1,8 @@
 // Recursive-descent SQL parser.
 // Grammar (simplified):
-//   select_stmt  := SELECT proj_list FROM ident [WHERE expr] [;]
+//   select_stmt  := SELECT proj_list FROM ident [WHERE expr] [ORDER BY order_list] [LIMIT integer] [;]
 //   proj_list    := * | ident (',' ident)*
+//   order_list   := ident [ASC|DESC] (',' ident [ASC|DESC])*
 //   expr         := or_expr
 //   or_expr      := and_expr (OR and_expr)*
 //   and_expr     := not_expr (AND not_expr)*
@@ -106,6 +107,17 @@ SelectStatement SQLParser::parseSelect() {
     skipWS();
     if (tryKeyword("WHERE"))
         stmt.whereClause = parseExpr();
+    skipWS();
+    if (tryKeyword("ORDER")) {
+        expectKeyword("BY");
+        stmt.orderByColumns = parseOrderByList();
+    }
+    skipWS();
+    if (tryKeyword("LIMIT")) {
+        stmt.limitCount = consumeInt();
+        if (stmt.limitCount < 0)
+            throw ParseError("LIMIT value must be non-negative");
+    }
     return stmt;
 }
 
@@ -121,6 +133,38 @@ std::vector<std::string> SQLParser::parseProjectionList() {
     while (!atEnd() && peek() == ',') {
         consume();
         cols.push_back(consumeIdent());
+        skipWS();
+    }
+    return cols;
+}
+
+std::vector<OrderByColumn> SQLParser::parseOrderByList() {
+    std::vector<OrderByColumn> cols;
+    OrderByColumn col;
+    col.columnName = consumeIdent();
+    skipWS();
+    // Check for ASC or DESC
+    if (tryKeyword("DESC")) {
+        col.direction = SortDirection::Descending;
+    } else {
+        tryKeyword("ASC"); // optional, default is ascending
+        col.direction = SortDirection::Ascending;
+    }
+    cols.push_back(col);
+    
+    skipWS();
+    while (!atEnd() && peek() == ',') {
+        consume();
+        OrderByColumn nextCol;
+        nextCol.columnName = consumeIdent();
+        skipWS();
+        if (tryKeyword("DESC")) {
+            nextCol.direction = SortDirection::Descending;
+        } else {
+            tryKeyword("ASC");
+            nextCol.direction = SortDirection::Ascending;
+        }
+        cols.push_back(nextCol);
         skipWS();
     }
     return cols;

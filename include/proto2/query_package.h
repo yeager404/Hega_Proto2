@@ -43,11 +43,14 @@ enum class PredNodeKind : uint8_t {
     ColumnRef    = 0,
     LiteralRef   = 1, // references EncryptedLiteralEntry by id
     Equal        = 2,
-    GreaterThan  = 3,
-    LessThan     = 4,
-    And          = 5,
-    Or           = 6,
-    Not          = 7,
+    NotEqual     = 3,
+    GreaterThan  = 4,
+    LessThan     = 5,
+    GreaterEqual = 6,
+    LessEqual    = 7,
+    And          = 8,
+    Or           = 9,
+    Not          = 10,
 };
 
 struct PredNode {

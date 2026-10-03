@@ -71,16 +71,22 @@ uint32_t QueryEncryptor::buildPredNode(const ASTExpr& expr,
         }
 
         case ASTExprKind::Equal:
+        case ASTExprKind::NotEqual:
         case ASTExprKind::GreaterThan:
-        case ASTExprKind::LessThan: {
+        case ASTExprKind::LessThan:
+        case ASTExprKind::GreaterEqual:
+        case ASTExprKind::LessEqual: {
             uint32_t l = buildPredNode(*expr.left,  nodes, literals, nextLiteralId);
             uint32_t r = buildPredNode(*expr.right, nodes, literals, nextLiteralId);
             node.left  = l;
             node.right = r;
             switch (expr.kind) {
                 case ASTExprKind::Equal:       node.kind = PredNodeKind::Equal;       break;
+                case ASTExprKind::NotEqual:    node.kind = PredNodeKind::NotEqual;    break;
                 case ASTExprKind::GreaterThan: node.kind = PredNodeKind::GreaterThan; break;
                 case ASTExprKind::LessThan:    node.kind = PredNodeKind::LessThan;    break;
+                case ASTExprKind::GreaterEqual:node.kind = PredNodeKind::GreaterEqual;break;
+                case ASTExprKind::LessEqual:   node.kind = PredNodeKind::LessEqual;   break;
                 default: break;
             }
             nodes.push_back(node);

@@ -33,9 +33,11 @@ Then at the `SQL>` prompt:
 
 ```sql
 SELECT id, salary FROM employees WHERE id = 10 AND age > 3;
+SELECT * FROM employees WHERE age >= 5 ORDER BY salary DESC LIMIT 3;
+SELECT id, age FROM employees WHERE id != 5 ORDER BY age ASC;
 ```
 
-Expected output:
+Expected output (first query):
 ```
 id | salary
 ---+-------
@@ -64,11 +66,16 @@ cd build && ctest --output-on-failure
 SELECT col1, col2, ...   -- or SELECT *
 FROM table
 [WHERE expr]
+[ORDER BY col1 [ASC|DESC], col2 [ASC|DESC], ...]
+[LIMIT n]
 
 -- Expressions:
 column = literal
+column != literal
 column > literal
 column < literal
+column >= literal
+column <= literal
 expr AND expr
 expr OR expr
 NOT expr

@@ -27,6 +27,17 @@ const TableSchema& SemanticAnalyzer::analyze(const SelectStatement& stmt) {
     if (stmt.whereClause)
         validateExpr(*stmt.whereClause, schema);
 
+    // Validate ORDER BY columns
+    for (auto& orderCol : stmt.orderByColumns) {
+        if (!schema.hasColumn(orderCol.columnName))
+            throw SemanticError("Unknown ORDER BY column '" + orderCol.columnName +
+                                "' in table '" + stmt.tableName + "'");
+    }
+
+    // Validate LIMIT
+    if (stmt.limitCount < -1)
+        throw SemanticError("LIMIT value must be non-negative");
+
     return schema;
 }
 

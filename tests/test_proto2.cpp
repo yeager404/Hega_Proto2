@@ -158,6 +158,10 @@ struct E2ECtx {
             auto r = decoder.decode(b);
             rows.insert(rows.end(), r.begin(), r.end());
         }
+        
+        // Apply ORDER BY and LIMIT (client-side post-processing)
+        ResultDecoder::applySortAndLimit(rows, stmt.orderByColumns, stmt.limitCount);
+        
         return rows;
     }
 };
@@ -536,6 +540,150 @@ TEST_F(E2ETest, ResultBatchSerialization) {
     auto rows = decoder.decode(batch2);
     ASSERT_EQ(rows.size(), 1u);
     EXPECT_EQ(rows[0].values.at("id"), 3);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW OPERATOR TESTS (>=, <=, !=)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST(ParserTest, WhereNotEqual) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees WHERE id != 5");
+    ASSERT_NE(stmt.whereClause, nullptr);
+    EXPECT_EQ(stmt.whereClause->kind, ASTExprKind::NotEqual);
+}
+
+TEST(ParserTest, WhereGreaterEqual) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees WHERE age >= 10");
+    ASSERT_NE(stmt.whereClause, nullptr);
+    EXPECT_EQ(stmt.whereClause->kind, ASTExprKind::GreaterEqual);
+}
+
+TEST(ParserTest, WhereLessEqual) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees WHERE age <= 5");
+    ASSERT_NE(stmt.whereClause, nullptr);
+    EXPECT_EQ(stmt.whereClause->kind, ASTExprKind::LessEqual);
+}
+
+TEST_F(E2ETest, NotEqualFilter) {
+    // id != 5 → all rows except id=5 → 9 rows
+    auto rows = ctx_.runQuery("SELECT id FROM employees WHERE id != 5");
+    ASSERT_EQ(rows.size(), 9u);
+    for (auto& row : rows) {
+        EXPECT_NE(row.values.at("id"), 5);
+    }
+}
+
+TEST_F(E2ETest, GreaterEqualFilter) {
+    // age >= 10 → age=10(id=9), age=11(id=10) → 2 rows
+    auto rows = ctx_.runQuery("SELECT id FROM employees WHERE age >= 10");
+    ASSERT_EQ(rows.size(), 2u);
+}
+
+TEST_F(E2ETest, LessEqualFilter) {
+    // age <= 3 → age=2(id=1), age=3(id=2) → 2 rows
+    auto rows = ctx_.runQuery("SELECT id FROM employees WHERE age <= 3");
+    ASSERT_EQ(rows.size(), 2u);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ORDER BY AND LIMIT TESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST(ParserTest, OrderByAscending) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id, salary FROM employees ORDER BY salary ASC");
+    ASSERT_EQ(stmt.orderByColumns.size(), 1u);
+    EXPECT_EQ(stmt.orderByColumns[0].columnName, "salary");
+    EXPECT_EQ(stmt.orderByColumns[0].direction, SortDirection::Ascending);
+}
+
+TEST(ParserTest, OrderByDescending) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id, salary FROM employees ORDER BY salary DESC");
+    ASSERT_EQ(stmt.orderByColumns.size(), 1u);
+    EXPECT_EQ(stmt.orderByColumns[0].columnName, "salary");
+    EXPECT_EQ(stmt.orderByColumns[0].direction, SortDirection::Descending);
+}
+
+TEST(ParserTest, OrderByMultipleColumns) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id, age, salary FROM employees ORDER BY age ASC, salary DESC");
+    ASSERT_EQ(stmt.orderByColumns.size(), 2u);
+    EXPECT_EQ(stmt.orderByColumns[0].columnName, "age");
+    EXPECT_EQ(stmt.orderByColumns[0].direction, SortDirection::Ascending);
+    EXPECT_EQ(stmt.orderByColumns[1].columnName, "salary");
+    EXPECT_EQ(stmt.orderByColumns[1].direction, SortDirection::Descending);
+}
+
+TEST(ParserTest, LimitClause) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees LIMIT 5");
+    EXPECT_EQ(stmt.limitCount, 5);
+}
+
+TEST(ParserTest, OrderByAndLimit) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT id, salary FROM employees ORDER BY salary DESC LIMIT 3");
+    ASSERT_EQ(stmt.orderByColumns.size(), 1u);
+    EXPECT_EQ(stmt.orderByColumns[0].columnName, "salary");
+    EXPECT_EQ(stmt.limitCount, 3);
+}
+
+TEST(SemanticTest, OrderByUnknownColumn) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees ORDER BY nonexistent");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST_F(E2ETest, OrderByAscendingExecution) {
+    // ORDER BY id ASC → rows in ascending order
+    auto rows = ctx_.runQuery("SELECT id, salary FROM employees ORDER BY id ASC");
+    ASSERT_EQ(rows.size(), 10u);
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
+        EXPECT_LE(rows[i].values.at("id"), rows[i+1].values.at("id"));
+    }
+}
+
+TEST_F(E2ETest, OrderByDescendingExecution) {
+    // ORDER BY salary DESC → rows in descending order
+    auto rows = ctx_.runQuery("SELECT id, salary FROM employees ORDER BY salary DESC");
+    ASSERT_EQ(rows.size(), 10u);
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
+        EXPECT_GE(rows[i].values.at("salary"), rows[i+1].values.at("salary"));
+    }
+}
+
+TEST_F(E2ETest, LimitExecution) {
+    // LIMIT 3 → only 3 rows returned
+    auto rows = ctx_.runQuery("SELECT id FROM employees LIMIT 3");
+    ASSERT_EQ(rows.size(), 3u);
+}
+
+TEST_F(E2ETest, OrderByAndLimitExecution) {
+    // ORDER BY salary DESC LIMIT 3 → top 3 highest salaries
+    auto rows = ctx_.runQuery("SELECT id, salary FROM employees ORDER BY salary DESC LIMIT 3");
+    ASSERT_EQ(rows.size(), 3u);
+    // Should be id=10(sal=14), id=9(sal=13), id=8(sal=12)
+    EXPECT_EQ(rows[0].values.at("salary"), 14);
+    EXPECT_EQ(rows[1].values.at("salary"), 13);
+    EXPECT_EQ(rows[2].values.at("salary"), 12);
+}
+
+TEST_F(E2ETest, OrderByWithWhereClause) {
+    // WHERE age > 5 ORDER BY salary ASC
+    auto rows = ctx_.runQuery("SELECT id, age, salary FROM employees WHERE age > 5 ORDER BY salary ASC");
+    ASSERT_GT(rows.size(), 0u);
+    for (auto& row : rows) {
+        EXPECT_GT(row.values.at("age"), 5);
+    }
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
+        EXPECT_LE(rows[i].values.at("salary"), rows[i+1].values.at("salary"));
+    }
 }
 
 int main(int argc, char** argv) {

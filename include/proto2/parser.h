@@ -1,6 +1,6 @@
 #pragma once
 // Minimal recursive-descent SQL parser.
-// Supports: SELECT col_list FROM table [WHERE expr]
+// Supports: SELECT col_list FROM table [WHERE expr] [ORDER BY col_list] [LIMIT n]
 // Expressions: =, !=, >, <, >=, <=, AND, OR, NOT, integer literals, column refs.
 
 #include "proto2/ast.h"
@@ -36,6 +36,7 @@ private:
     // Parser
     SelectStatement parseSelect();
     std::vector<std::string> parseProjectionList();
+    std::vector<OrderByColumn> parseOrderByList();
     std::shared_ptr<ASTExpr> parseExpr();
     std::shared_ptr<ASTExpr> parseOr();
     std::shared_ptr<ASTExpr> parseAnd();

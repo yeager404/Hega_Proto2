@@ -5,9 +5,16 @@
 ```sql
 SELECT id, salary
 FROM employees
-WHERE id = 10
-  AND age > 3;
+WHERE age >= 5
+ORDER BY salary DESC
+LIMIT 3;
 ```
+
+This query demonstrates:
+- Projection: `id, salary`
+- Filter with new operator: `age >= 5`
+- Client-side sorting: `ORDER BY salary DESC`
+- Result truncation: `LIMIT 3`
 
 ---
 
@@ -28,13 +35,13 @@ SelectStatement
   projections: [id, salary]
   tableName:   employees
   whereClause:
-    AND
-    ├── Equal
-    │   ├── ColumnRef(id)
-    │   └── IntLiteral(10)       ← plaintext at this stage
-    └── GreaterThan
-        ├── ColumnRef(age)
-        └── IntLiteral(3)        ← plaintext at this stage
+    GreaterEqual
+    ├── ColumnRef(age)
+    └── IntLiteral(5)        ← plaintext at this stage
+  orderByColumns: [
+    { columnName: "salary", direction: Descending }
+  ]
+  limitCount: 3
 ```
 
 ---
@@ -44,9 +51,10 @@ SelectStatement
 `SemanticAnalyzer::analyze()` checks:
 - `employees` exists in the Catalog ✓
 - `id`, `salary` are valid projection columns ✓
-- `id`, `age` are valid WHERE columns ✓
-- `id = 10`: INT64 column compared to integer literal ✓
-- `age > 3`: INT64 column compared to integer literal ✓
+- `age` is a valid WHERE column ✓
+- `age >= 5`: INT64 column compared to integer literal ✓
+- `salary` is a valid ORDER BY column ✓
+- `limitCount = 3` is non-negative ✓
 
 Throws `SemanticError` on any violation before any encryption occurs.
 
@@ -57,12 +65,13 @@ Throws `SemanticError` on any violation before any encryption occurs.
 `LogicalPlanner::plan()` produces:
 
 ```
-LogicalProject(id, salary)
-  └── LogicalFilter(id=10 AND age>3)
+LogicalProject(id, salary, age)  ← age added for ORDER BY sorting
+  └── LogicalFilter(age>=5)
         └── LogicalScan(employees)
 ```
 
-Literals remain plaintext in the logical plan.
+Note: `age` is added to the projection even though not requested by the user,
+because it's needed for client-side ORDER BY sorting.
 
 ---
 
@@ -73,8 +82,8 @@ Literals remain plaintext in the logical plan.
 ```
 PhysicalPlan {
   tableName:      employees
-  scanColumns:    [id, age, salary]   ← union of predicate + projection cols
-  projectColumns: [id, salary]
+  scanColumns:    [id, salary, age]   ← union of predicate + projection cols
+  projectColumns: [id, salary, age]   ← includes ORDER BY column
   hasFilter:      true
 }
 ```
@@ -85,22 +94,18 @@ PhysicalPlan {
 
 `QueryEncryptor::encrypt()` walks the AST WHERE clause:
 
-- `IntLiteral(10)` → `ctx.encryptScalar(10)` → `Enc(10)` (BFV ciphertext)
-- `IntLiteral(3)`  → `ctx.encryptScalar(3)`  → `Enc(3)`  (BFV ciphertext)
+- `IntLiteral(5)` → `ctx.encryptScalar(5)` → `Enc(5)` (BFV ciphertext)
 
 The predicate tree is rebuilt as `PredNode` structs using `LiteralRef` IDs:
 
 ```
-PredNode[4]: AND
-  left  → PredNode[1]: Equal
-            left  → PredNode[0]: ColumnRef(id)
-            right → PredNode[1]: LiteralRef(id=0)   ← references Enc(10)
-  right → PredNode[3]: GreaterThan
-            left  → PredNode[2]: ColumnRef(age)
-            right → PredNode[3]: LiteralRef(id=1)   ← references Enc(3)
+PredNode[2]: GreaterEqual
+  left  → PredNode[0]: ColumnRef(age)
+  right → PredNode[1]: LiteralRef(id=0)   ← references Enc(5)
 ```
 
-The server will see the structure but not the values 10 or 3.
+The server will see the structure but not the value 5. The `>=` operator is
+implemented server-side as `GT(age, 5) OR EQ(age, 5)` using FHE operations.
 
 ---
 
@@ -112,18 +117,19 @@ QueryPackage {
   protocolVersion:  2
   tableName:        "employees"
   scanColumns:      ["id", "age", "salary"]
-  projectColumns:   ["id", "salary"]
-  predicateNodes:   [ColumnRef(id), LiteralRef(0), Equal,
-                     ColumnRef(age), LiteralRef(1), GreaterThan, And]
+  projectColumns:   ["id", "salary", "age"]
+  predicateNodes:   [ColumnRef(age), LiteralRef(0), GreaterEqual]
   encryptedLiterals: [
-    { id:0, type:"INT64", ciphertextBytes: <9615 bytes> },
-    { id:1, type:"INT64", ciphertextBytes: <9615 bytes> }
+    { id:0, type:"INT64", ciphertextBytes: <9615 bytes> }
   ]
   fheParams: { paramSetId:"bfv-257-depth9", slotCount:64, ... }
 }
 ```
 
-Serialized to ~19 KB via cereal binary archive.
+Note: ORDER BY and LIMIT are NOT sent to the server — they are applied
+client-side after decryption.
+
+Serialized to ~10 KB via cereal binary archive.
 
 ---
 
@@ -131,7 +137,7 @@ Serialized to ~19 KB via cereal binary archive.
 
 `TcpClientTransport::sendQuery()` sends:
 ```
-[type=QueryRequest][length=19695][payload=serialized QueryPackage]
+[type=QueryRequest][length=10245][payload=serialized QueryPackage]
 ```
 
 ---
@@ -144,7 +150,7 @@ Serialized to ~19 KB via cereal binary archive.
 - scan/project columns exist ✓
 - fheParams.paramSetId matches server context ✓
 - all LiteralRef IDs have corresponding encryptedLiterals ✓
-- predicate tree is structurally valid ✓
+- predicate tree is structurally valid (GreaterEqual recognized) ✓
 
 ---
 
@@ -152,7 +158,7 @@ Serialized to ~19 KB via cereal binary archive.
 
 `QueryExecutor::execute()` builds:
 ```
-ProjectExec([id, salary])
+ProjectExec([id, salary, age])
   └── FilterExec(predicate)
         └── TableScanExec(employees, [id, age, salary])
 ```
@@ -171,16 +177,18 @@ Each column is a single BFV ciphertext packing all 10 row values.
 `ExpressionExecutor::evaluate()` on the predicate tree:
 
 ```
-EQ(id_ct, Enc(10)):
-  d = EvalSub(id_ct, Enc(10))
-  mask1 = 1 - d^(p-1)          [Fermat: d^256 = 0 iff d=0 mod 257]
-
-GT(age_ct, Enc(3)):
-  d = EvalSub(age_ct, Enc(3))
-  mask2 = Σ_{k=1}^{128} [1 - (d-k)^256]
-
-AND(mask1, mask2):
-  final_mask = EvalMult(mask1, mask2)
+GE(age_ct, Enc(5)):
+  # Implemented as GT(age_ct, Enc(5)) OR EQ(age_ct, Enc(5))
+  
+  # First compute GT:
+  d = EvalSub(age_ct, Enc(5))
+  mask_gt = Σ_{k=1}^{128} [1 - (d-k)^256]
+  
+  # Then compute EQ:
+  mask_eq = 1 - d^256
+  
+  # Combine with OR:
+  mask_ge = mask_gt + mask_eq - (mask_gt * mask_eq)
 ```
 
 All operations are homomorphic — the server never decrypts.
@@ -189,7 +197,7 @@ All operations are homomorphic — the server never decrypts.
 
 ### Step 12 — Encrypted result generated
 
-`ProjectExec` selects `id` and `salary` columns.
+`ProjectExec` selects `id`, `salary`, and `age` columns.
 `FilterExec` attaches the encrypted selection mask.
 
 `EncryptedResultBatch`:
@@ -199,7 +207,8 @@ All operations are homomorphic — the server never decrypts.
   logicalRowCount: 10
   columns: [
     { name:"id",     ciphertextBytes: <9615 bytes> },
-    { name:"salary", ciphertextBytes: <9615 bytes> }
+    { name:"salary", ciphertextBytes: <9615 bytes> },
+    { name:"age",    ciphertextBytes: <9615 bytes> }
   ]
   selectionMaskBytes: <9615 bytes>
   hasMask: true
@@ -213,7 +222,7 @@ All operations are homomorphic — the server never decrypts.
 Server sends:
 ```
 [type=QueryResponse][length=...][success=true, batchCount=1]
-[type=ResultBatch][length=28698][serialized EncryptedResultBatch]
+[type=ResultBatch][length=38313][serialized EncryptedResultBatch]
 ```
 
 ---
@@ -224,7 +233,7 @@ Server sends:
 
 1. Decrypt selection mask:
    ```
-   mask = [0,0,0,0,0,0,0,0,0,1]   ← row 10 (index 9) matches
+   mask = [0,0,0,0,1,1,1,1,1,1]   ← rows 5-10 match (age >= 5)
    ```
 
 2. Decrypt id column:
@@ -237,24 +246,60 @@ Server sends:
    salaries = [5,6,7,8,9,10,11,12,13,14]
    ```
 
+4. Decrypt age column:
+   ```
+   ages = [2,3,4,5,6,7,8,9,10,11]
+   ```
+
 ---
 
 ### Step 15 — Client applies mask and reconstructs rows
 
 For each index i where mask[i] == 1:
 ```
-i=9: id=10, salary=14  ← selected
+i=4: id=5,  salary=9,  age=6
+i=5: id=6,  salary=10, age=7
+i=6: id=7,  salary=11, age=8
+i=7: id=8,  salary=12, age=9
+i=8: id=9,  salary=13, age=10
+i=9: id=10, salary=14, age=11
 ```
 
 ---
 
-### Step 16 — Result printed
+### Step 16 — Client applies ORDER BY and LIMIT
 
+`ResultDecoder::applySortAndLimit()`:
+
+1. Sort by salary DESC:
+   ```
+   id=10, salary=14, age=11
+   id=9,  salary=13, age=10
+   id=8,  salary=12, age=9
+   id=7,  salary=11, age=8
+   id=6,  salary=10, age=7
+   id=5,  salary=9,  age=6
+   ```
+
+2. Apply LIMIT 3:
+   ```
+   id=10, salary=14, age=11
+   id=9,  salary=13, age=10
+   id=8,  salary=12, age=9
+   ```
+
+---
+
+### Step 17 — Result printed
+
+Display only originally requested columns (id, salary):
 ```
 id | salary
 ---+-------
 10 | 14
-(1 row)
+ 9 | 13
+ 8 | 12
+(3 rows)
 
 [Verification] ✓ PASS — FHE result matches plaintext reference
 ```

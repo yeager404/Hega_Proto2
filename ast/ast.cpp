@@ -51,6 +51,17 @@ std::string SelectStatement::toSQL() const {
     s += " FROM " + tableName;
     if (whereClause)
         s += " WHERE " + whereClause->toSQL();
+    if (!orderByColumns.empty()) {
+        s += " ORDER BY ";
+        for (size_t i = 0; i < orderByColumns.size(); ++i) {
+            if (i) s += ", ";
+            s += orderByColumns[i].columnName;
+            if (orderByColumns[i].direction == SortDirection::Descending)
+                s += " DESC";
+        }
+    }
+    if (limitCount >= 0)
+        s += " LIMIT " + std::to_string(limitCount);
     return s;
 }
 

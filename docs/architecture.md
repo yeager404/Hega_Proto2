@@ -18,16 +18,18 @@ CLIENT
   ├── SQL Terminal          (client/client_main.cpp)
   │       │
   ├── SQL Parser            (parser/parser.cpp)
-  │       │  → SelectStatement AST
+  │       │  → SelectStatement AST (with ORDER BY, LIMIT)
   ├── Semantic Analyzer     (semantic/semantic.cpp)
-  │       │  validates table/column/type correctness
+  │       │  validates table/column/type correctness + ORDER BY columns
   ├── Logical Planner       (planner/planner.cpp)
   │       │  → LogicalNode tree (Project→Filter→Scan)
+  │       │  includes ORDER BY columns in projection for client-side sorting
   ├── Physical Planner      (planner/planner.cpp)
   │       │  → PhysicalPlan (column lists, filter flag)
   ├── Query Encryptor       (query/query_encryptor.cpp)
   │       │  encrypts integer literals → EncryptedLiteralEntry
   │       │  builds PredNode tree (literal IDs, not values)
+  │       │  handles =, !=, >, <, >=, <=, AND, OR, NOT
   ├── QueryPackage          (query/query_package.cpp)
   │       │  serialized via cereal binary archive
   └── TcpClientTransport    (transport/transport.cpp)
@@ -46,6 +48,8 @@ SERVER
   │       rebuilds proto1 physical plan from PredNode tree:
   │         ProjectExec → FilterExec → TableScanExec
   │       deserializes encrypted literals (server never sees plaintext)
+  │       implements !=, >=, <= via FHE composition:
+  │         != = NOT(EQ), >= = GT OR EQ, <= = LT OR EQ
   ├── proto1 Execution Engine
   │       TableScanExec  — reads encrypted columns from FilesystemStorage
   │       FilterExec     — evaluates predicate via ExpressionExecutor
@@ -71,7 +75,11 @@ CLIENT
   │       decrypts selection mask
   │       decrypts each projected column
   │       reconstructs rows where mask[i] == 1
+  ├── Sort & Limit          (result/result_decoder.cpp)
+  │       applies ORDER BY (client-side, post-decryption)
+  │       applies LIMIT (truncates result set)
   └── SQL Result Printer    (client/client_main.cpp)
+          displays only originally requested columns
 ```
 
 ---
@@ -118,6 +126,24 @@ The predicate tree is serialized as a flat array of `PredNode` structs. Integer
 literals are replaced by `LiteralRef` nodes that reference an index into the
 `encryptedLiterals` array. The server reconstructs the proto1 `Expression` tree
 by deserializing ciphertexts from the package — it never sees plaintext values.
+
+Supported comparison operators (=, !=, >, <, >=, <=) are all implemented via
+FHE operations. Compound operators are composed from primitives:
+- `!=` (NotEqual) = `NOT(Equal(a,b))`
+- `>=` (GreaterEqual) = `OR(GT(a,b), Equal(a,b))`
+- `<=` (LessEqual) = `OR(LT(a,b), Equal(a,b))`
+
+### Client-Side Post-Processing
+ORDER BY and LIMIT are implemented client-side after decryption. This is
+necessary because:
+1. FHE-based sorting is extremely expensive (O(n²) comparisons, each requiring
+   deep circuits)
+2. The client must decrypt results anyway, so sorting on plaintext is efficient
+3. LIMIT can be applied immediately after sorting with no additional cost
+
+ORDER BY columns are automatically included in the projection (if not already
+present) so they can be decrypted for sorting. The final output displays only
+the originally requested columns.
 
 ### Transport
 Simple TCP with 4-byte type + 4-byte length + payload framing. No gRPC or

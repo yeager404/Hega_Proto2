@@ -53,7 +53,8 @@ static const char* EMPLOYEES_CSV =
     "7,8,11,4\n"
     "8,9,12,4\n"
     "9,10,13,5\n"
-    "10,11,14,5\n";
+    "10,11,14,5\n"
+    "11,21,13,2\n";
 
 // ── Setup ─────────────────────────────────────────────────────────────────
 static void runSetup(const std::string& keysDir, const std::string& dataDir) {
@@ -158,9 +159,10 @@ static void printResult(const std::vector<std::string>& cols,
 
 // ── Plaintext reference ───────────────────────────────────────────────────
 struct PlainRow { int64_t id, age, salary, department_id; };
-static const PlainRow PLAIN_DATA[10] = {
+static const PlainRow PLAIN_DATA[11] = {
     {1,2,5,1},{2,3,6,1},{3,4,7,2},{4,5,8,2},{5,6,9,3},
-    {6,7,10,3},{7,8,11,4},{8,9,12,4},{9,10,13,5},{10,11,14,5}
+    {6,7,10,3},{7,8,11,4},{8,9,12,4},{9,10,13,5},{10,11,14,5},
+    {11,21,13,2}
 };
 
 static int64_t getField(const PlainRow& r, const std::string& col) {
@@ -199,6 +201,10 @@ static std::vector<ResultRow> executePlaintext(const SelectStatement& stmt) {
         }
         result.push_back(std::move(r));
     }
+    
+    // Apply ORDER BY and LIMIT
+    ResultDecoder::applySortAndLimit(result, stmt.orderByColumns, stmt.limitCount);
+    
     return result;
 }
 
@@ -284,10 +290,17 @@ static void executeQuery(const std::string& sql,
     }
     metrics.decryptMs = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now()-t0).count();
 
+    // Apply ORDER BY and LIMIT (client-side post-processing)
+    ResultDecoder::applySortAndLimit(allRows, stmt.orderByColumns, stmt.limitCount);
+
     metrics.totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now()-tTotal).count();
 
     std::cout << "\n";
-    printResult(physPlan.projectColumns, allRows);
+    // Display only originally requested columns (not ORDER BY columns added for sorting)
+    std::vector<std::string> displayCols = stmt.projections.empty() 
+        ? physPlan.projectColumns  // SELECT * case - show all
+        : stmt.projections;        // Show only originally requested columns
+    printResult(displayCols, allRows);
 
     // Plaintext verification
     auto plainRows = executePlaintext(stmt);

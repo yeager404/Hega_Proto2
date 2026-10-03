@@ -107,6 +107,13 @@ QueryExecutor::buildExpression(const QueryPackage& pkg, uint32_t nodeIdx) const 
             return proto1::Expression::equal(l, r);
         }
 
+        case PredNodeKind::NotEqual: {
+            auto l = buildExpression(pkg, node.left);
+            auto r = buildExpression(pkg, node.right);
+            auto eq = proto1::Expression::equal(l, r);
+            return proto1::Expression::notExpr(eq);
+        }
+
         case PredNodeKind::GreaterThan: {
             auto l = buildExpression(pkg, node.left);
             auto r = buildExpression(pkg, node.right);
@@ -117,6 +124,22 @@ QueryExecutor::buildExpression(const QueryPackage& pkg, uint32_t nodeIdx) const 
             auto l = buildExpression(pkg, node.left);
             auto r = buildExpression(pkg, node.right);
             return proto1::Expression::lt(l, r);
+        }
+
+        case PredNodeKind::GreaterEqual: {
+            auto l = buildExpression(pkg, node.left);
+            auto r = buildExpression(pkg, node.right);
+            auto gt = proto1::Expression::gt(l, r);
+            auto eq = proto1::Expression::equal(l, r);
+            return proto1::Expression::orExpr(gt, eq);
+        }
+
+        case PredNodeKind::LessEqual: {
+            auto l = buildExpression(pkg, node.left);
+            auto r = buildExpression(pkg, node.right);
+            auto lt = proto1::Expression::lt(l, r);
+            auto eq = proto1::Expression::equal(l, r);
+            return proto1::Expression::orExpr(lt, eq);
         }
 
         case PredNodeKind::And: {

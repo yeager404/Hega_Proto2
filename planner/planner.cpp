@@ -38,6 +38,14 @@ LogicalPlanner::plan(const SelectStatement& stmt, const TableSchema& schema) {
         project->columns = stmt.projections;
     }
 
+    // Ensure ORDER BY columns are included in projection (needed for client-side sorting)
+    for (auto& orderCol : stmt.orderByColumns) {
+        if (std::find(project->columns.begin(), project->columns.end(), 
+                     orderCol.columnName) == project->columns.end()) {
+            project->columns.push_back(orderCol.columnName);
+        }
+    }
+
     return project;
 }
 

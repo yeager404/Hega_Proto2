@@ -74,11 +74,25 @@ struct ASTExpr {
 
 // ── Statement nodes ───────────────────────────────────────────────────────
 
-// SELECT col1, col2, ... FROM table [WHERE expr]
+// Sort direction for ORDER BY
+enum class SortDirection {
+    Ascending,
+    Descending
+};
+
+// ORDER BY column specification
+struct OrderByColumn {
+    std::string columnName;
+    SortDirection direction{SortDirection::Ascending};
+};
+
+// SELECT col1, col2, ... FROM table [WHERE expr] [ORDER BY ...] [LIMIT n]
 struct SelectStatement {
     std::vector<std::string>  projections; // column names; empty = *
     std::string               tableName;
     std::shared_ptr<ASTExpr>  whereClause; // nullptr if no WHERE
+    std::vector<OrderByColumn> orderByColumns; // empty if no ORDER BY
+    int64_t                   limitCount{-1}; // -1 if no LIMIT
 
     std::string toSQL() const;
 };

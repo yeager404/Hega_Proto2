@@ -1,5 +1,32 @@
 # Implementation Status
 
+## Recent Enhancements (Latest)
+
+### New SQL Operators
+- **!=** (Not Equal): Implemented as `NOT(EQ(a,b))` via FHE composition
+- **>=** (Greater or Equal): Implemented as `GT(a,b) OR EQ(a,b)` via FHE composition
+- **<=** (Less or Equal): Implemented as `LT(a,b) OR EQ(a,b)` via FHE composition
+
+### New SQL Clauses
+- **ORDER BY**: Client-side sorting after decryption
+  - Multiple columns supported
+  - ASC/DESC direction per column
+  - ORDER BY columns automatically included in projection for decryption
+  - Final display shows only originally requested columns
+- **LIMIT**: Client-side result truncation after sorting
+  - Applied after ORDER BY
+  - Efficient (no additional FHE operations)
+
+### Implementation Details
+- All new operators integrated into AST, parser, semantic analyzer, query encryptor, and query executor
+- FHE execution uses composition of primitive operations (EQ, GT, LT, AND, OR, NOT)
+- ORDER BY and LIMIT are post-processing operations on decrypted data
+- Comprehensive test coverage added (45 total tests, all passing)
+
+---
+
+## Original Implementation Phases
+
 ## Phase A — Client SQL Front End
 
 - [x] SQL parser (recursive-descent, no external dependency)
@@ -8,6 +35,9 @@
 - [x] Catalog (employees schema, extensible)
 - [x] Logical planner (AST → Project→Filter→Scan tree)
 - [x] Physical planner (logical → PhysicalPlan with column lists)
+- [x] **NEW: Support for !=, >=, <= operators**
+- [x] **NEW: ORDER BY clause parsing and validation**
+- [x] **NEW: LIMIT clause parsing and validation**
 
 ## Phase B — Query Encryption
 
@@ -21,6 +51,7 @@
 - [x] QueryValidator (protocol, schema, FHE params, predicate tree)
 - [x] QueryExecutor (rebuilds proto1 plan from PredNode tree)
 - [x] Integration with proto1 execution engine (reused unchanged)
+- [x] **NEW: FHE execution for !=, >=, <= via composition**
 
 ## Phase D — Transport
 
@@ -36,15 +67,17 @@
 - [x] Row reconstruction (apply mask, filter to matching rows)
 - [x] Terminal output (aligned table, row count)
 - [x] Plaintext reference verification (auto-compare every query result)
+- [x] **NEW: Client-side ORDER BY (multi-column, ASC/DESC)**
+- [x] **NEW: Client-side LIMIT (result truncation)**
 
 ## Phase F — Testing
 
-- [x] Parser tests (12 tests)
-- [x] Semantic analysis tests (5 tests)
+- [x] Parser tests (15 tests: including !=, >=, <=, ORDER BY, LIMIT)
+- [x] Semantic analysis tests (6 tests: including ORDER BY validation)
 - [x] Planner tests (3 tests)
 - [x] Crypto/serialization tests (5 tests)
-- [x] End-to-end tests (10 tests, all passing)
-- **Total: 35/35 tests passing**
+- [x] End-to-end tests (16 tests: including new operators and clauses)
+- **Total: 45/45 tests passing**
 
 ## Phase G — Benchmarking
 
