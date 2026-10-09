@@ -75,6 +75,32 @@ void QueryValidator::validatePredTree(const QueryPackage& pkg,
             return;
         }
 
+        case PredNodeKind::StringEqual:
+        case PredNodeKind::StringNotEqual: {
+            if (node.columnName.empty() || node.stringWidth == 0)
+                throw ValidationError("String predicate is missing metadata");
+            const auto& column = schema.column(node.columnName);
+            if (column.type != DataType::STRING ||
+                node.stringWidth != column.maxLength)
+                throw ValidationError("Invalid string predicate column: " +
+                                      node.columnName);
+            for (uint32_t i = 0; i < node.stringWidth; ++i) {
+                const uint32_t id = node.literalId + i;
+                bool found = false;
+                for (const auto& literal : pkg.encryptedLiterals) {
+                    if (literal.id == id &&
+                        literal.logicalType == "STRING_CHAR" &&
+                        !literal.ciphertextBytes.empty()) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    throw ValidationError("String predicate references missing literal");
+            }
+            return;
+        }
+
         case PredNodeKind::Equal:
         case PredNodeKind::NotEqual:
         case PredNodeKind::GreaterThan:

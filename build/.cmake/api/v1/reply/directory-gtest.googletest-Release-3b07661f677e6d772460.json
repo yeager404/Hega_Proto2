@@ -1,0 +1,174 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"install_project"
+		],
+		"files" : 
+		[
+			"/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googletest/CMakeLists.txt",
+			"/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googletest/cmake/internal_utils.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 97,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 104,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 158,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 301,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 305,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 329,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 329,
+				"parent" : 3
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 10
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "gtest",
+			"destination" : "lib64/cmake/GTest",
+			"exportName" : "GTestTargets",
+			"exportTargets" : 
+			[
+				{
+					"id" : "gtest::@b738d542747fbb7ea6e3",
+					"index" : 2
+				},
+				{
+					"id" : "gtest_main::@b738d542747fbb7ea6e3",
+					"index" : 3
+				},
+				{
+					"id" : "gmock::@e3f94eedc5dc07131386",
+					"index" : 0
+				},
+				{
+					"id" : "gmock_main::@e3f94eedc5dc07131386",
+					"index" : 1
+				}
+			],
+			"paths" : 
+			[
+				"gtest/googletest/CMakeFiles/Export/5d445a69522011472a13f6464cd74fcd/GTestTargets.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "gtest",
+			"destination" : "lib64/cmake/GTest",
+			"paths" : 
+			[
+				"build/gtest/googletest/generated/GTestConfigVersion.cmake",
+				"build/gtest/googletest/generated/GTestConfig.cmake"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "gtest",
+			"destination" : "include",
+			"paths" : 
+			[
+				{
+					"from" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googletest/include",
+					"to" : "."
+				}
+			],
+			"type" : "directory"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "gtest",
+			"destination" : "lib64",
+			"paths" : 
+			[
+				"lib/libgtest.a"
+			],
+			"targetId" : "gtest::@b738d542747fbb7ea6e3",
+			"targetIndex" : 2,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "gtest",
+			"destination" : "lib64",
+			"paths" : 
+			[
+				"lib/libgtest_main.a"
+			],
+			"targetId" : "gtest_main::@b738d542747fbb7ea6e3",
+			"targetIndex" : 3,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "gtest",
+			"destination" : "lib64/pkgconfig",
+			"paths" : 
+			[
+				"build/gtest/googletest/generated/gtest.pc"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "gtest",
+			"destination" : "lib64/pkgconfig",
+			"paths" : 
+			[
+				"build/gtest/googletest/generated/gtest_main.pc"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "gtest/googletest",
+		"source" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googletest"
+	}
+}

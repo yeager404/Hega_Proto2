@@ -33,9 +33,9 @@ protected:
 
     static void SetUpTestSuite() {
         proto1::FHEParameterSet params;
-        params.id                  = "bfv-257-depth9";
+        params.id                  = "bfv-257-depth12";
         params.plaintextModulus    = 257;
-        params.multiplicativeDepth = 9;
+        params.multiplicativeDepth = 12;
         params.ringDimension       = 128;
 
         clientCtx_ = ClientCryptoContext::create(params);
@@ -94,9 +94,9 @@ struct E2ECtx {
         std::string dataDir = c.tmpDir + "/data";
 
         proto1::FHEParameterSet params;
-        params.id = "bfv-257-depth9";
+        params.id = "bfv-257-depth12";
         params.plaintextModulus = 257;
-        params.multiplicativeDepth = 9;
+        params.multiplicativeDepth = 12;
         params.ringDimension = 128;
 
         // Create client context
@@ -104,9 +104,10 @@ struct E2ECtx {
 
         // Ingest dataset
         static const char* CSV =
-            "id,age,salary,department_id\n"
-            "1,2,5,1\n2,3,6,1\n3,4,7,2\n4,5,8,2\n5,6,9,3\n"
-            "6,7,10,3\n7,8,11,4\n8,9,12,4\n9,10,13,5\n10,11,14,5\n";
+            "id,age,salary,department_id,name\n"
+            "1,2,5,1,Alice\n2,3,6,1,Bob\n3,4,7,2,Carol\n4,5,8,2,David\n"
+            "5,6,9,3,Eve\n6,7,10,3,Frank\n7,8,11,4,Grace\n8,9,12,4,Heidi\n"
+            "9,10,13,5,Ivan\n10,11,14,5,Judy\n";
         std::string csvPath = c.tmpDir + "/emp.csv";
         fs::create_directories(c.tmpDir);
         { std::ofstream f(csvPath); f << CSV; }
@@ -114,6 +115,7 @@ struct E2ECtx {
         proto1::TableSchema schema{"employees",
             {{"id",proto1::DataType::INT64},{"age",proto1::DataType::INT64},
              {"salary",proto1::DataType::INT64},{"department_id",proto1::DataType::INT64}}};
+        schema.columns.push_back({"name", proto1::DataType::STRING, 16});
 
         fs::create_directories(dataDir);
         auto stor = proto1::makeFilesystemStorage(dataDir, c.clientCtx->keyCtxPtr());
@@ -190,6 +192,37 @@ TEST(ParserTest, SelectColumns) {
     ASSERT_EQ(stmt.projections.size(), 2u);
     EXPECT_EQ(stmt.projections[0], "id");
     EXPECT_EQ(stmt.projections[1], "salary");
+}
+
+TEST(ParserTest, StringLiteral) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT name FROM employees WHERE name = 'Alice'");
+    ASSERT_NE(stmt.whereClause, nullptr);
+    EXPECT_EQ(stmt.whereClause->kind, ASTExprKind::Equal);
+    EXPECT_EQ(stmt.whereClause->left->columnName, "name");
+    EXPECT_EQ(stmt.whereClause->right->kind, ASTExprKind::StringLiteral);
+    EXPECT_EQ(stmt.whereClause->right->stringValue, "Alice");
+}
+
+TEST(ParserTest, EscapedStringLiteral) {
+    SQLParser p;
+    auto stmt = p.parse("SELECT name FROM employees WHERE name = 'O''Brien'");
+    ASSERT_NE(stmt.whereClause, nullptr);
+    EXPECT_EQ(stmt.whereClause->right->stringValue, "O'Brien");
+}
+
+TEST(ParserTest, UnterminatedStringThrows) {
+    SQLParser p;
+    EXPECT_THROW(
+        p.parse("SELECT name FROM employees WHERE name = 'Alice"),
+        ParseError);
+}
+
+TEST(ParserTest, NonAsciiStringThrows) {
+    SQLParser p;
+    EXPECT_THROW(
+        p.parse(u8"SELECT name FROM employees WHERE name = 'Caf\u00E9'"),
+        ParseError);
 }
 
 TEST(ParserTest, WhereEqual) {
@@ -307,6 +340,31 @@ TEST(SemanticTest, ValidAndPredicate) {
     SQLParser p;
     auto stmt = p.parse("SELECT id FROM employees WHERE id = 5 AND age > 3");
     EXPECT_NO_THROW(a.analyze(stmt));
+}
+
+TEST(SemanticTest, StringIntegerComparisonRejected) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees WHERE name = 5");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST(SemanticTest, StringOrderingRejected) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse("SELECT id FROM employees WHERE name > 'Alice'");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST(SemanticTest, OverlongStringRejected) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT id FROM employees WHERE name = 'SixteenCharacters!'");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -681,9 +739,26 @@ TEST_F(E2ETest, OrderByWithWhereClause) {
     for (auto& row : rows) {
         EXPECT_GT(row.values.at("age"), 5);
     }
+
     for (size_t i = 0; i < rows.size() - 1; ++i) {
         EXPECT_LE(rows[i].values.at("salary"), rows[i+1].values.at("salary"));
     }
+}
+
+TEST_F(E2ETest, StringEquality) {
+    auto rows = ctx_.runQuery(
+        "SELECT id, name FROM employees WHERE name = 'Alice'");
+    ASSERT_EQ(rows.size(), 1u);
+    EXPECT_EQ(rows[0].values.at("id"), 1);
+    EXPECT_EQ(rows[0].stringValues.at("name"), "Alice");
+}
+
+TEST_F(E2ETest, StringInequality) {
+    auto rows = ctx_.runQuery(
+        "SELECT id FROM employees WHERE name != 'Alice'");
+    ASSERT_EQ(rows.size(), 9u);
+    for (const auto& row : rows)
+        EXPECT_NE(row.values.at("id"), 1);
 }
 
 int main(int argc, char** argv) {

@@ -73,6 +73,8 @@ target_link_libraries(prototype2_server PRIVATE proto2)
 # ── Client executable ──────────────────────────────────────────────────────
 add_executable(prototype2_client client/client_main.cpp)
 target_link_libraries(prototype2_client PRIVATE proto2)
+target_compile_definitions(prototype2_client PRIVATE
+    PROTO2_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 # ── Benchmark ─────────────────────────────────────────────────────────────
 add_executable(prototype2_benchmark benchmarks/benchmark.cpp)

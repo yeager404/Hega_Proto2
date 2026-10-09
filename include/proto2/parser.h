@@ -29,6 +29,7 @@ private:
     char        consume();
     std::string consumeIdent();
     int64_t     consumeInt();
+    std::string consumeString();
     bool        tryKeyword(const std::string& kw);
     void        expectKeyword(const std::string& kw);
     void        expectChar(char c);

@@ -14,6 +14,7 @@ namespace proto2 {
 enum class ASTExprKind {
     ColumnRef,
     IntLiteral,
+    StringLiteral,
     Equal,
     NotEqual,
     GreaterThan,
@@ -34,6 +35,9 @@ struct ASTExpr {
     // IntLiteral
     int64_t intValue{0};
 
+    // StringLiteral (ASCII, validated against the column schema later)
+    std::string stringValue;
+
     // Binary / unary children
     std::shared_ptr<ASTExpr> left;
     std::shared_ptr<ASTExpr> right; // null for Not
@@ -49,6 +53,13 @@ struct ASTExpr {
         auto e = std::make_shared<ASTExpr>();
         e->kind = ASTExprKind::IntLiteral;
         e->intValue = v;
+        return e;
+    }
+
+    static std::shared_ptr<ASTExpr> stringLiteral(std::string v) {
+        auto e = std::make_shared<ASTExpr>();
+        e->kind = ASTExprKind::StringLiteral;
+        e->stringValue = std::move(v);
         return e;
     }
 

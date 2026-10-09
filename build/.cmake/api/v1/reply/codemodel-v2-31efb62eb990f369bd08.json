@@ -1,0 +1,304 @@
+{
+	"configurations" : 
+	[
+		{
+			"abstractTargets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "OPENFHEbinfhe::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-OPENFHEbinfhe-Release-1e24daf194bb8cd04657.json",
+					"name" : "OPENFHEbinfhe",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "OPENFHEcore::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-OPENFHEcore-Release-cbe125e5d9f4bb9802e4.json",
+					"name" : "OPENFHEcore",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "OPENFHEpke::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-OPENFHEpke-Release-9f66d02d1a271e663fc5.json",
+					"name" : "OPENFHEpke",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "Threads::Threads::@b738d542747fbb7ea6e3",
+					"jsonFile" : "target-Threads__Threads-Release-61bc773a3d20615cef07.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "Threads::Threads::@e3f94eedc5dc07131386",
+					"jsonFile" : "target-Threads__Threads-Release-0f7b8b20bbecad2f10b5.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 2
+				}
+			],
+			"directories" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-fd6451d79dc282e2f566.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						4,
+						5,
+						6,
+						7,
+						8,
+						9
+					]
+				},
+				{
+					"build" : "gtest",
+					"childIndexes" : 
+					[
+						2
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-gtest-Release-44b94d00c53bcfbe4741.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test"
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						4
+					],
+					"build" : "gtest/googlemock",
+					"childIndexes" : 
+					[
+						3
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-gtest.googlemock-Release-e7badc9aeb7402575342.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 2,
+					"source" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googlemock",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						3
+					],
+					"build" : "gtest/googletest",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-gtest.googletest-Release-3b07661f677e6d772460.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"parentIndex" : 2,
+					"projectIndex" : 3,
+					"source" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googletest",
+					"targetIndexes" : 
+					[
+						2,
+						3
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Prototype2",
+					"targetIndexes" : 
+					[
+						4,
+						5,
+						6,
+						7,
+						8,
+						9
+					]
+				},
+				{
+					"childIndexes" : 
+					[
+						2
+					],
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "googletest-distribution",
+					"parentIndex" : 0
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						4
+					],
+					"childIndexes" : 
+					[
+						3
+					],
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "gmock",
+					"parentIndex" : 1,
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						3
+					],
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "gtest",
+					"parentIndex" : 2,
+					"targetIndexes" : 
+					[
+						2,
+						3
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 2,
+					"id" : "gmock::@e3f94eedc5dc07131386",
+					"jsonFile" : "target-gmock-Release-343f96797501eb1b6bae.json",
+					"name" : "gmock",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "gmock_main::@e3f94eedc5dc07131386",
+					"jsonFile" : "target-gmock_main-Release-d123f16b656ea96df94c.json",
+					"name" : "gmock_main",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "gtest::@b738d542747fbb7ea6e3",
+					"jsonFile" : "target-gtest-Release-275edefe64bafc9a816e.json",
+					"name" : "gtest",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "gtest_main::@b738d542747fbb7ea6e3",
+					"jsonFile" : "target-gtest_main-Release-f2833ec45cde5f8c6085.json",
+					"name" : "gtest_main",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "proto1::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-proto1-Release-e6c5726206b1342764f0.json",
+					"name" : "proto1",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "proto2::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-proto2-Release-9afbf4e92462b76f5c41.json",
+					"name" : "proto2",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "prototype2_benchmark::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-prototype2_benchmark-Release-8beb0f0597647d9f0c97.json",
+					"name" : "prototype2_benchmark",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "prototype2_client::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-prototype2_client-Release-c2b616d16cea881fe828.json",
+					"name" : "prototype2_client",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "prototype2_server::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-prototype2_server-Release-0f6c33b072b590137455.json",
+					"name" : "prototype2_server",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "prototype2_tests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-prototype2_tests-Release-a0fbd6be1f5e3a34a0b9.json",
+					"name" : "prototype2_tests",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/yeager404/Workspace/OpenFHE/Prototype 2/build",
+		"source" : "/home/yeager404/Workspace/OpenFHE/Prototype 2"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 10
+	}
+}

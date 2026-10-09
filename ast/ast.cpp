@@ -23,6 +23,8 @@ std::string ASTExpr::toSQL() const {
     switch (kind) {
         case ASTExprKind::ColumnRef:   return columnName;
         case ASTExprKind::IntLiteral:  return std::to_string(intValue);
+        case ASTExprKind::StringLiteral:
+            return "'" + stringValue + "'";
         case ASTExprKind::Not:         return "NOT(" + left->toSQL() + ")";
         case ASTExprKind::Equal:
         case ASTExprKind::NotEqual:

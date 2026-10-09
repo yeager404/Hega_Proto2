@@ -34,7 +34,8 @@ and is never transmitted to the server.
 
 - **Query literal values**: integer literals in WHERE clauses (e.g. `id = 10`,
   `age > 30`) are encrypted client-side before the query package is sent. The
-  server receives `Enc(10)` and `Enc(30)`, not `10` and `30`.
+  server receives `Enc(10)` and `Enc(30)`, not `10` and `30`. ASCII string
+  literals are encrypted character-by-character.
 
 - **Intermediate results**: all predicate evaluation (EQ, GT, LT, AND, OR, NOT)
   operates on ciphertexts. The server never decrypts intermediate masks.
@@ -75,6 +76,10 @@ and is never transmitted to the server.
 | Side-channel resistance | Timing of FHE operations may leak information |
 | Result count leakage | Server knows how many ciphertexts are in each batch |
 | Ciphertext size leakage | Ciphertext sizes are observable |
+
+String columns are represented as a fixed number of encrypted character
+columns. Their configured maximum length is visible schema metadata, while
+stored string contents and string predicate literals remain encrypted.
 
 ---
 

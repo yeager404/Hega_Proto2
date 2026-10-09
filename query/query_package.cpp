@@ -24,12 +24,12 @@ void serialize(Archive& ar, proto2::EncryptedLiteralEntry& e) {
 
 template <class Archive>
 void serialize(Archive& ar, proto2::PredNode& n) {
-    ar(n.kind, n.columnName, n.literalId, n.left, n.right);
+    ar(n.kind, n.columnName, n.literalId, n.stringWidth, n.left, n.right);
 }
 
 template <class Archive>
 void serialize(Archive& ar, proto2::ColumnSchema& c) {
-    ar(c.name, c.type);
+    ar(c.name, c.type, c.maxLength);
 }
 
 template <class Archive>

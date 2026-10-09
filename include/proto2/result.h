@@ -12,6 +12,8 @@ namespace proto2 {
 
 struct EncryptedColumnResult {
     std::string          columnName;
+    std::string          logicalType{"INT64"};
+    uint32_t              stringPosition{0};
     std::vector<uint8_t> ciphertextBytes;
     size_t               logicalSize{0};
 };
@@ -34,6 +36,7 @@ struct EncryptedResultBatch {
 // Reconstructed plaintext row after client decryption.
 struct ResultRow {
     std::unordered_map<std::string, int64_t> values;
+    std::unordered_map<std::string, std::string> stringValues;
 };
 
 } // namespace proto2

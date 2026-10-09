@@ -30,9 +30,19 @@ ResultDecoder::decode(const EncryptedResultBatch& batch) const {
 
     // Decrypt each column
     std::unordered_map<std::string, std::vector<int64_t>> cols;
+    std::unordered_map<std::string,
+                       std::vector<std::vector<int64_t>>> stringCols;
     for (auto& cr : batch.columns) {
         auto ct = ctx_->keyCtx().deserializeWithSize(cr.ciphertextBytes, rowCount);
-        cols[cr.columnName] = ctx_->decrypt(*ct, rowCount);
+        auto values = ctx_->decrypt(*ct, rowCount);
+        if (cr.logicalType == "STRING") {
+            auto& positions = stringCols[cr.columnName];
+            if (positions.size() <= cr.stringPosition)
+                positions.resize(cr.stringPosition + 1);
+            positions[cr.stringPosition] = std::move(values);
+        } else {
+            cols[cr.columnName] = std::move(values);
+        }
     }
 
     // Reconstruct rows where mask[i] == 1
@@ -42,6 +52,17 @@ ResultDecoder::decode(const EncryptedResultBatch& batch) const {
             ResultRow row;
             for (auto& [colName, vals] : cols)
                 row.values[colName] = vals[i];
+            for (auto& [colName, positions] : stringCols) {
+                std::string value;
+                for (const auto& chars : positions) {
+                    if (i >= chars.size() || chars[i] == 0)
+                        break;
+                    if (chars[i] < 0 || chars[i] > 127)
+                        throw std::runtime_error("Decoded string contains invalid ASCII");
+                    value.push_back(static_cast<char>(chars[i]));
+                }
+                row.stringValues[colName] = std::move(value);
+            }
             rows.push_back(std::move(row));
         }
     }

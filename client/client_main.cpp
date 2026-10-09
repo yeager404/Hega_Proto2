@@ -41,21 +41,6 @@ namespace fs = std::filesystem;
 using namespace proto2;
 using Clock = std::chrono::high_resolution_clock;
 
-// ── Dataset ───────────────────────────────────────────────────────────────
-static const char* EMPLOYEES_CSV =
-    "id,age,salary,department_id\n"
-    "1,2,5,1\n"
-    "2,3,6,1\n"
-    "3,4,7,2\n"
-    "4,5,8,2\n"
-    "5,6,9,3\n"
-    "6,7,10,3\n"
-    "7,8,11,4\n"
-    "8,9,12,4\n"
-    "9,10,13,5\n"
-    "10,11,14,5\n"
-    "11,21,13,2\n";
-
 // ── Setup ─────────────────────────────────────────────────────────────────
 static void runSetup(const std::string& keysDir, const std::string& dataDir) {
     std::cout << "╔══════════════════════════════════════════════════════╗\n"
@@ -63,12 +48,12 @@ static void runSetup(const std::string& keysDir, const std::string& dataDir) {
               << "╚══════════════════════════════════════════════════════╝\n\n";
 
     proto1::FHEParameterSet params;
-    params.id                  = "bfv-257-depth9";
+    params.id                  = "bfv-257-depth12";
     params.plaintextModulus    = 257;
-    params.multiplicativeDepth = 9;
+    params.multiplicativeDepth = 12;
     params.ringDimension       = 128;
 
-    std::cout << "[Setup] Generating FHE keys (BFV p=257 depth=9 N=128)...\n";
+    std::cout << "[Setup] Generating FHE keys (BFV p=257 depth=12 N=128)...\n";
     auto t0 = Clock::now();
     auto clientCtx = ClientCryptoContext::create(params);
     auto t1 = Clock::now();
@@ -81,14 +66,20 @@ static void runSetup(const std::string& keysDir, const std::string& dataDir) {
     clientCtx->saveKeys(keysDir);
     std::cout << "[Setup] Server keys saved to: " << keysDir << "\n";
 
+    const fs::path bundledCsv = fs::path(PROTO2_SOURCE_DIR) / "data.csv";
+    if (!fs::exists(bundledCsv)) {
+        throw std::runtime_error("Dataset not found: " + bundledCsv.string());
+    }
+
     auto tmpCsv = fs::temp_directory_path() / "proto2_employees.csv";
-    { std::ofstream f(tmpCsv); f << EMPLOYEES_CSV; }
+    fs::copy_file(bundledCsv, tmpCsv, fs::copy_options::overwrite_existing);
 
     proto1::TableSchema schema{"employees",
         {{"id",            proto1::DataType::INT64},
          {"age",           proto1::DataType::INT64},
          {"salary",        proto1::DataType::INT64},
-         {"department_id", proto1::DataType::INT64}}};
+        {"department_id", proto1::DataType::INT64},
+        {"name",          proto1::DataType::STRING, 16}}};
 
     fs::create_directories(dataDir);
     auto storage = proto1::makeFilesystemStorage(dataDir, clientCtx->keyCtxPtr());
@@ -131,8 +122,11 @@ static void printResult(const std::vector<std::string>& cols,
     for (auto& row : rows)
         for (size_t i = 0; i < cols.size(); ++i) {
             auto it = row.values.find(cols[i]);
+            auto sit = row.stringValues.find(cols[i]);
             if (it != row.values.end())
                 widths[i] = std::max(widths[i], std::to_string(it->second).size());
+            if (sit != row.stringValues.end())
+                widths[i] = std::max(widths[i], sit->second.size());
         }
 
     for (size_t i = 0; i < cols.size(); ++i) {
@@ -149,7 +143,10 @@ static void printResult(const std::vector<std::string>& cols,
         for (size_t i = 0; i < cols.size(); ++i) {
             if (i) std::cout << " | ";
             auto it = row.values.find(cols[i]);
-            std::string val = (it != row.values.end()) ? std::to_string(it->second) : "NULL";
+            auto sit = row.stringValues.find(cols[i]);
+            std::string val = it != row.values.end()
+                ? std::to_string(it->second)
+                : (sit != row.stringValues.end() ? sit->second : "NULL");
             std::cout << std::setw((int)widths[i]) << std::left << val;
         }
         std::cout << "\n";
@@ -158,11 +155,12 @@ static void printResult(const std::vector<std::string>& cols,
 }
 
 // ── Plaintext reference ───────────────────────────────────────────────────
-struct PlainRow { int64_t id, age, salary, department_id; };
+struct PlainRow { int64_t id, age, salary, department_id; const char* name; };
 static const PlainRow PLAIN_DATA[11] = {
-    {1,2,5,1},{2,3,6,1},{3,4,7,2},{4,5,8,2},{5,6,9,3},
-    {6,7,10,3},{7,8,11,4},{8,9,12,4},{9,10,13,5},{10,11,14,5},
-    {11,21,13,2}
+    {1,2,5,1,"Alice"},{2,3,6,1,"Bob"},{3,4,7,2,"Carol"},
+    {4,5,8,2,"David"},{5,6,9,3,"Eve"},{6,7,10,3,"Frank"},
+    {7,8,11,4,"Grace"},{8,9,12,4,"Heidi"},{9,10,13,5,"Ivan"},
+    {10,11,14,5,"Judy"},{11,21,13,2,"Karl"}
 };
 
 static int64_t getField(const PlainRow& r, const std::string& col) {
@@ -173,10 +171,29 @@ static int64_t getField(const PlainRow& r, const std::string& col) {
     throw std::runtime_error("Unknown column: "+col);
 }
 
+static std::string getStringField(const PlainRow& r, const std::string& col) {
+    if (col == "name") return r.name;
+    throw std::runtime_error("Unknown string column: " + col);
+}
+
 static bool evalPlain(const ASTExpr& e, const PlainRow& r) {
     switch (e.kind) {
-        case ASTExprKind::Equal:        return getField(r,e.left->columnName)==e.right->intValue;
-        case ASTExprKind::NotEqual:     return getField(r,e.left->columnName)!=e.right->intValue;
+        case ASTExprKind::Equal:
+        case ASTExprKind::NotEqual: {
+            const ASTExpr& column = e.left->kind == ASTExprKind::ColumnRef
+                ? *e.left : *e.right;
+            const ASTExpr& literal = e.left->kind == ASTExprKind::StringLiteral
+                ? *e.left : *e.right;
+            if (column.kind == ASTExprKind::ColumnRef &&
+                literal.kind == ASTExprKind::StringLiteral) {
+                const bool equal =
+                    getStringField(r, column.columnName) == literal.stringValue;
+                return e.kind == ASTExprKind::Equal ? equal : !equal;
+            }
+            if (e.kind == ASTExprKind::Equal)
+                return getField(r,e.left->columnName)==e.right->intValue;
+            return getField(r,e.left->columnName)!=e.right->intValue;
+        }
         case ASTExprKind::GreaterThan:  return getField(r,e.left->columnName)> e.right->intValue;
         case ASTExprKind::LessThan:     return getField(r,e.left->columnName)< e.right->intValue;
         case ASTExprKind::GreaterEqual: return getField(r,e.left->columnName)>=e.right->intValue;
@@ -196,8 +213,12 @@ static std::vector<ResultRow> executePlaintext(const SelectStatement& stmt) {
         if (stmt.projections.empty()) {
             r.values["id"]=row.id; r.values["age"]=row.age;
             r.values["salary"]=row.salary; r.values["department_id"]=row.department_id;
+            r.stringValues["name"] = row.name;
         } else {
-            for (auto& c : stmt.projections) r.values[c]=getField(row,c);
+            for (auto& c : stmt.projections) {
+                if (c == "name") r.stringValues[c] = row.name;
+                else r.values[c] = getField(row,c);
+            }
         }
         result.push_back(std::move(r));
     }
@@ -310,8 +331,24 @@ static void executeQuery(const std::string& sql,
             for (auto& col : physPlan.projectColumns) {
                 auto it1 = allRows[i].values.find(col);
                 auto it2 = plainRows[i].values.find(col);
-                if (it1==allRows[i].values.end() || it2==plainRows[i].values.end() ||
-                    it1->second != it2->second) { match=false; break; }
+                if (it1 != allRows[i].values.end() ||
+                    it2 != plainRows[i].values.end()) {
+                    if (it1 == allRows[i].values.end() ||
+                        it2 == plainRows[i].values.end() ||
+                        it1->second != it2->second) {
+                        match = false;
+                        break;
+                    }
+                } else {
+                    auto sit1 = allRows[i].stringValues.find(col);
+                    auto sit2 = plainRows[i].stringValues.find(col);
+                    if (sit1 == allRows[i].stringValues.end() ||
+                        sit2 == plainRows[i].stringValues.end() ||
+                        sit1->second != sit2->second) {
+                        match = false;
+                        break;
+                    }
+                }
             }
     }
     std::cout << "\n[Verification] " << (match?"✓ PASS":"✗ FAIL")
@@ -372,6 +409,7 @@ int main(int argc, char* argv[]) {
               << "[Client] Type SQL queries. 'exit' or Ctrl-D to quit.\n\n";
 
     std::string line, sql;
+    bool awaitingTerminator = false;
     while (true) {
         std::cout << (sql.empty() ? "SQL> " : "  -> ") << std::flush;
         if (!std::getline(std::cin, line)) break;
@@ -386,15 +424,35 @@ int main(int argc, char* argv[]) {
         try {
             SQLParser testParser;
             testParser.parse(sql);
-            executeQuery(sql, *clientCtx, transport, catalog);
-            sql.clear();
+            if (hasSemi || !awaitingTerminator) {
+                executeQuery(sql, *clientCtx, transport, catalog);
+                sql.clear();
+                awaitingTerminator = false;
+            }
         } catch (ParseError& e) {
             std::string msg = e.what();
-            if (msg.find("Unexpected end") != std::string::npos && !hasSemi) {
-                // incomplete — keep reading
+            const bool startsWithSelect =
+                sql.size() >= 6 &&
+                std::equal(sql.begin(), sql.begin() + 6, "SELECT",
+                           [](char lhs, char rhs) {
+                               return std::toupper(static_cast<unsigned char>(lhs)) ==
+                                      std::toupper(static_cast<unsigned char>(rhs));
+                           });
+            const bool incomplete =
+                msg.find("Unexpected end") != std::string::npos ||
+                msg.find("Expected keyword") != std::string::npos ||
+                msg.find("Expected identifier") != std::string::npos ||
+                msg.find("Expected string") != std::string::npos ||
+                msg.find("Expected integer") != std::string::npos ||
+                msg.find("Expected ')'") != std::string::npos;
+            if (!hasSemi && startsWithSelect && incomplete) {
+                // Keep incomplete SELECT statements so multiline input can
+                // continue until the user terminates it with ';'.
+                awaitingTerminator = true;
             } else {
                 std::cout << "Error: " << msg << "\n";
                 sql.clear();
+                awaitingTerminator = false;
             }
         }
     }

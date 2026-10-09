@@ -8,6 +8,28 @@ namespace proto2 {
 QueryEncryptor::QueryEncryptor(std::shared_ptr<ClientCryptoContext> ctx)
     : ctx_(std::move(ctx)) {}
 
+uint32_t QueryEncryptor::addEncryptedString(
+    const std::string& value,
+    size_t maxLength,
+    std::vector<EncryptedLiteralEntry>& literals,
+    uint32_t& nextLiteralId) {
+    const uint32_t firstId = nextLiteralId;
+    for (size_t position = 0; position < maxLength; ++position) {
+        const int64_t code = position < value.size()
+            ? static_cast<unsigned char>(value[position])
+            : 0;
+        auto ct = ctx_->encryptScalar(code);
+
+        EncryptedLiteralEntry entry;
+        entry.id = nextLiteralId++;
+        entry.logicalType = "STRING_CHAR";
+        entry.ciphertextBytes = ct->serialize();
+        entry.logicalSize = ct->logicalSize();
+        literals.push_back(std::move(entry));
+    }
+    return firstId;
+}
+
 QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
                                       const PhysicalPlan& plan,
                                       const TableSchema& schema,
@@ -22,7 +44,7 @@ QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
     // Build result schema
     for (auto& col : plan.projectColumns) {
         auto& cs = schema.column(col);
-        pkg.resultSchema.push_back({cs.name, cs.type});
+        pkg.resultSchema.push_back({cs.name, cs.type, cs.maxLength});
     }
 
     // Build predicate node tree (encrypts literals)
@@ -31,7 +53,8 @@ QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
         buildPredNode(*stmt.whereClause,
                       pkg.predicateNodes,
                       pkg.encryptedLiterals,
-                      nextLiteralId);
+                      nextLiteralId,
+                      schema);
     }
 
     return pkg;
@@ -40,7 +63,8 @@ QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
 uint32_t QueryEncryptor::buildPredNode(const ASTExpr& expr,
                                         std::vector<PredNode>& nodes,
                                         std::vector<EncryptedLiteralEntry>& literals,
-                                        uint32_t& nextLiteralId) {
+                                        uint32_t& nextLiteralId,
+                                        const TableSchema& schema) {
     PredNode node;
 
     switch (expr.kind) {
@@ -70,14 +94,51 @@ uint32_t QueryEncryptor::buildPredNode(const ASTExpr& expr,
             return static_cast<uint32_t>(nodes.size() - 1);
         }
 
+        case ASTExprKind::StringLiteral:
+            throw std::runtime_error(
+                "QueryEncryptor: string literal must be used in a comparison");
+
         case ASTExprKind::Equal:
         case ASTExprKind::NotEqual:
         case ASTExprKind::GreaterThan:
         case ASTExprKind::LessThan:
         case ASTExprKind::GreaterEqual:
         case ASTExprKind::LessEqual: {
-            uint32_t l = buildPredNode(*expr.left,  nodes, literals, nextLiteralId);
-            uint32_t r = buildPredNode(*expr.right, nodes, literals, nextLiteralId);
+            const ASTExpr& left = *expr.left;
+            const ASTExpr& right = *expr.right;
+            const bool stringComparison =
+                (left.kind == ASTExprKind::ColumnRef &&
+                 right.kind == ASTExprKind::StringLiteral) ||
+                (left.kind == ASTExprKind::StringLiteral &&
+                 right.kind == ASTExprKind::ColumnRef);
+
+            if (stringComparison) {
+                const ASTExpr& column =
+                    left.kind == ASTExprKind::ColumnRef ? left : right;
+                const ASTExpr& literal =
+                    left.kind == ASTExprKind::StringLiteral ? left : right;
+                const auto& columnSchema = schema.column(column.columnName);
+                const uint32_t firstId = addEncryptedString(
+                    literal.stringValue,
+                    columnSchema.maxLength,
+                    literals,
+                    nextLiteralId);
+
+                node.kind = expr.kind == ASTExprKind::Equal
+                    ? PredNodeKind::StringEqual
+                    : PredNodeKind::StringNotEqual;
+                node.columnName = column.columnName;
+                node.literalId = firstId;
+                node.stringWidth =
+                    static_cast<uint32_t>(columnSchema.maxLength);
+                nodes.push_back(node);
+                return static_cast<uint32_t>(nodes.size() - 1);
+            }
+
+            uint32_t l = buildPredNode(*expr.left, nodes, literals,
+                                        nextLiteralId, schema);
+            uint32_t r = buildPredNode(*expr.right, nodes, literals,
+                                        nextLiteralId, schema);
             node.left  = l;
             node.right = r;
             switch (expr.kind) {
@@ -95,8 +156,10 @@ uint32_t QueryEncryptor::buildPredNode(const ASTExpr& expr,
 
         case ASTExprKind::And:
         case ASTExprKind::Or: {
-            uint32_t l = buildPredNode(*expr.left,  nodes, literals, nextLiteralId);
-            uint32_t r = buildPredNode(*expr.right, nodes, literals, nextLiteralId);
+            uint32_t l = buildPredNode(*expr.left, nodes, literals,
+                                        nextLiteralId, schema);
+            uint32_t r = buildPredNode(*expr.right, nodes, literals,
+                                        nextLiteralId, schema);
             node.left  = l;
             node.right = r;
             node.kind  = (expr.kind == ASTExprKind::And) ? PredNodeKind::And : PredNodeKind::Or;
@@ -105,7 +168,8 @@ uint32_t QueryEncryptor::buildPredNode(const ASTExpr& expr,
         }
 
         case ASTExprKind::Not: {
-            uint32_t l = buildPredNode(*expr.left, nodes, literals, nextLiteralId);
+            uint32_t l = buildPredNode(*expr.left, nodes, literals,
+                                        nextLiteralId, schema);
             node.left  = l;
             node.kind  = PredNodeKind::Not;
             nodes.push_back(node);

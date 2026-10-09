@@ -84,15 +84,22 @@ NOT expr
 ## Supported Tables
 
 ```
-employees: id INT64, age INT64, salary INT64, department_id INT64
+employees: id INT64, age INT64, salary INT64, department_id INT64,
+           name STRING(16)
 ```
 
 Values must be in [0, 128] due to BFV plaintext modulus p=257.
+String columns use fixed-width ASCII encoding. String predicates currently
+support `=` and `!=`; Unicode, `LIKE`, and string ordering are not supported.
+String columns use fixed-width ASCII encoding (maximum length is schema-defined);
+the default `employees.name` column supports up to 16 ASCII characters.
+String predicates currently support `=` and `!=`.
 
 ## Unsupported (Future Work)
 
-- JOIN, GROUP BY, ORDER BY, LIMIT, aggregates
-- String literals, NULL, BETWEEN, IN
+- JOIN, GROUP BY, aggregates
+- NULL, BETWEEN, IN, LIKE
+- String ordering comparisons and Unicode strings
 - Multiple tables
 - Transactions, MVCC, WAL
 - Distributed sharding

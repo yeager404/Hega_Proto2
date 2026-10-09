@@ -13,6 +13,7 @@ Catalog makeEmployeesCatalog() {
         {"age",           DataType::INT64},
         {"salary",        DataType::INT64},
         {"department_id", DataType::INT64},
+        {"name",          DataType::STRING, 16},
     };
     cat.registerTable(std::move(employees));
     return cat;

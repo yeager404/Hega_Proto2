@@ -151,6 +151,6 @@ protobuf dependency required. Binary serialization via cereal avoids base64
 overhead on large ciphertexts.
 
 ### FHE Scheme
-BFV with p=257, depth=9, N=128. Values must be in [0, 128] for correct GT/LT
+BFV with p=257, depth=12, N=128. Values must be in [0, 128] for correct GT/LT
 semantics (positive half of Z_p). The paramSetId is validated on the server
 before execution.

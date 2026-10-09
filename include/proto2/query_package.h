@@ -22,7 +22,7 @@ namespace proto2 {
 
 // FHE parameter metadata — enough for the server to validate compatibility.
 struct FHEParamsMeta {
-    std::string paramSetId;       // e.g. "bfv-257-depth9"
+    std::string paramSetId;       // e.g. "bfv-257-depth12"
     uint64_t    plaintextModulus{0};
     uint32_t    multiplicativeDepth{0};
     uint32_t    ringDimension{0};
@@ -51,12 +51,15 @@ enum class PredNodeKind : uint8_t {
     And          = 8,
     Or           = 9,
     Not          = 10,
+    StringEqual = 11,
+    StringNotEqual = 12,
 };
 
 struct PredNode {
     PredNodeKind kind{PredNodeKind::ColumnRef};
     std::string  columnName;   // for ColumnRef
     uint32_t     literalId{0}; // for LiteralRef
+    uint32_t stringWidth{0}; // for StringEqual/StringNotEqual
     uint32_t     left{UINT32_MAX};  // index into nodes array
     uint32_t     right{UINT32_MAX}; // index into nodes array (UINT32_MAX = none)
 };

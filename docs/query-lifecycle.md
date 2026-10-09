@@ -122,7 +122,7 @@ QueryPackage {
   encryptedLiterals: [
     { id:0, type:"INT64", ciphertextBytes: <9615 bytes> }
   ]
-  fheParams: { paramSetId:"bfv-257-depth9", slotCount:64, ... }
+  fheParams: { paramSetId:"bfv-257-depth12", slotCount:64, ... }
 }
 ```
 

@@ -30,7 +30,13 @@ private:
     uint32_t buildPredNode(const ASTExpr& expr,
                             std::vector<PredNode>& nodes,
                             std::vector<EncryptedLiteralEntry>& literals,
-                            uint32_t& nextLiteralId);
+                            uint32_t& nextLiteralId,
+                            const TableSchema& schema);
+
+    uint32_t addEncryptedString(const std::string& value,
+                                size_t maxLength,
+                                std::vector<EncryptedLiteralEntry>& literals,
+                                uint32_t& nextLiteralId);
 };
 
 } // namespace proto2

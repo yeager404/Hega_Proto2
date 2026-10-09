@@ -13,7 +13,8 @@ namespace cereal {
 
 template <class Archive>
 void serialize(Archive& ar, proto2::EncryptedColumnResult& c) {
-    ar(c.columnName, c.ciphertextBytes, c.logicalSize);
+    ar(c.columnName, c.logicalType, c.stringPosition,
+       c.ciphertextBytes, c.logicalSize);
 }
 
 template <class Archive>

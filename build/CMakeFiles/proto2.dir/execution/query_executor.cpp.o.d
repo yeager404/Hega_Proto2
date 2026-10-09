@@ -162,4 +162,10 @@ CMakeFiles/proto2.dir/execution/query_executor.cpp.o: \
  /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/operators.h \
  /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/expression_executor.h \
  /usr/include/c++/16/optional \
- /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/result_stream.h
+ /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/result_stream.h \
+ /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/ingestion.h \
+ /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/catalog.h \
+ /home/yeager404/Workspace/OpenFHE/Prototype\ 2/../Prototype\ 1/include/proto1/types.h \
+ /usr/include/c++/16/functional /usr/include/c++/16/bits/std_function.h \
+ /usr/include/c++/16/bits/functexcept.h /usr/include/c++/16/array \
+ /usr/include/c++/16/compare

@@ -6,7 +6,9 @@
 #include "proto1/operators.h"
 #include "proto1/result_stream.h"
 #include "proto1/expression.h"
+#include "proto1/ingestion.h"
 
+#include <functional>
 #include <stdexcept>
 
 namespace proto2 {
@@ -23,8 +25,19 @@ QueryExecutor::execute(const QueryPackage& pkg) {
     auto fheCtx = serverCtx_->keyCtxPtr();
 
     // Build physical plan: ProjectExec -> FilterExec -> TableScanExec
+    std::vector<std::string> physicalScanColumns;
+    for (const auto& column : pkg.scanColumns) {
+        const auto& schema = catalog_.getTable(pkg.tableName).column(column);
+        if (schema.type == DataType::STRING) {
+            for (size_t position = 0; position < schema.maxLength; ++position)
+                physicalScanColumns.push_back(
+                    proto1::stringPhysicalColumn(column, position));
+        } else {
+            physicalScanColumns.push_back(column);
+        }
+    }
     auto scan = std::make_shared<proto1::TableScanExec>(
-        pkg.tableName, pkg.scanColumns, storage_);
+        pkg.tableName, physicalScanColumns, storage_);
 
     std::shared_ptr<proto1::PhysicalOperator> root = scan;
 
@@ -34,7 +47,19 @@ QueryExecutor::execute(const QueryPackage& pkg) {
         root = std::make_shared<proto1::FilterExec>(scan, predExpr, fheCtx);
     }
 
-    root = std::make_shared<proto1::ProjectExec>(root, pkg.projectColumns);
+    std::vector<std::string> physicalProjectColumns;
+    for (const auto& column : pkg.projectColumns) {
+        const auto& schema = catalog_.getTable(pkg.tableName).column(column);
+        if (schema.type == DataType::STRING) {
+            for (size_t position = 0; position < schema.maxLength; ++position)
+                physicalProjectColumns.push_back(
+                    proto1::stringPhysicalColumn(column, position));
+        } else {
+            physicalProjectColumns.push_back(column);
+        }
+    }
+    root = std::make_shared<proto1::ProjectExec>(
+        root, std::move(physicalProjectColumns));
 
     // Stream results
     proto1::EncryptedResultStream stream(root);
@@ -47,20 +72,34 @@ QueryExecutor::execute(const QueryPackage& pkg) {
         rb.logicalRowCount = batch->logicalRowCount;
 
         // Serialize each projected column
-        for (auto& colName : pkg.projectColumns) {
-            auto it = batch->columns.find(colName);
-            if (it == batch->columns.end())
-                throw std::runtime_error("QueryExecutor: missing column: " + colName);
+        for (const auto& colName : pkg.projectColumns) {
+            const auto& schema = catalog_.getTable(pkg.tableName).column(colName);
+            const size_t width = schema.type == DataType::STRING
+                ? schema.maxLength : 1;
+            for (size_t position = 0; position < width; ++position) {
+                const std::string physicalName =
+                    schema.type == DataType::STRING
+                        ? proto1::stringPhysicalColumn(colName, position)
+                        : colName;
+                auto it = batch->columns.find(physicalName);
+                if (it == batch->columns.end())
+                    throw std::runtime_error("QueryExecutor: missing column: " +
+                                             physicalName);
 
-            auto& chunk = it->second;
-            if (chunk.ciphertexts.empty())
-                throw std::runtime_error("QueryExecutor: empty ciphertext for: " + colName);
+                auto& chunk = it->second;
+                if (chunk.ciphertexts.empty())
+                    throw std::runtime_error("QueryExecutor: empty ciphertext for: " +
+                                             physicalName);
 
-            EncryptedColumnResult cr;
-            cr.columnName      = colName;
-            cr.ciphertextBytes = chunk.ciphertexts[0]->serialize();
-            cr.logicalSize     = chunk.ciphertexts[0]->logicalSize();
-            rb.columns.push_back(std::move(cr));
+                EncryptedColumnResult cr;
+                cr.columnName = colName;
+                cr.logicalType = schema.type == DataType::STRING
+                    ? "STRING" : "INT64";
+                cr.stringPosition = static_cast<uint32_t>(position);
+                cr.ciphertextBytes = chunk.ciphertexts[0]->serialize();
+                cr.logicalSize = chunk.ciphertexts[0]->logicalSize();
+                rb.columns.push_back(std::move(cr));
+            }
         }
 
         // Serialize selection mask
@@ -99,6 +138,46 @@ QueryExecutor::buildExpression(const QueryPackage& pkg, uint32_t nodeIdx) const 
             auto ct = fheCtx->deserializeWithSize(entry->ciphertextBytes,
                                                    entry->logicalSize);
             return proto1::Expression::encLiteral(ct);
+        }
+
+        case PredNodeKind::StringEqual:
+        case PredNodeKind::StringNotEqual: {
+            std::vector<std::shared_ptr<proto1::Expression>> comparisons;
+            for (uint32_t position = 0; position < node.stringWidth; ++position) {
+                const uint32_t literalId = node.literalId + position;
+                const EncryptedLiteralEntry* entry = nullptr;
+                for (const auto& literal : pkg.encryptedLiterals) {
+                    if (literal.id == literalId) {
+                        entry = &literal;
+                        break;
+                    }
+                }
+                if (!entry)
+                    throw std::runtime_error("buildExpression: string literal not found");
+
+                auto literal = fheCtx->deserializeWithSize(
+                    entry->ciphertextBytes, entry->logicalSize);
+                auto equal = proto1::Expression::equal(
+                    proto1::Expression::columnRef(
+                        proto1::stringPhysicalColumn(node.columnName, position)),
+                    proto1::Expression::encLiteral(literal));
+                comparisons.push_back(std::move(equal));
+            }
+            if (comparisons.empty())
+                throw std::runtime_error("buildExpression: empty string width");
+            std::function<std::shared_ptr<proto1::Expression>(size_t, size_t)>
+                combine;
+            combine = [&](size_t begin, size_t end) {
+                if (end - begin == 1)
+                    return comparisons[begin];
+                const size_t middle = begin + (end - begin) / 2;
+                return proto1::Expression::andExpr(
+                    combine(begin, middle), combine(middle, end));
+            };
+            auto result = combine(0, comparisons.size());
+            return node.kind == PredNodeKind::StringNotEqual
+                ? proto1::Expression::notExpr(result)
+                : result;
         }
 
         case PredNodeKind::Equal: {

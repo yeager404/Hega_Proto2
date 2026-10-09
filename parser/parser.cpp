@@ -75,6 +75,30 @@ int64_t SQLParser::consumeInt() {
     return neg ? -v : v;
 }
 
+std::string SQLParser::consumeString() {
+    skipWS();
+    if (atEnd() || consume() != '\'')
+        throw ParseError("Expected string literal at position " +
+                         std::to_string(pos_));
+
+    std::string value;
+    while (!atEnd()) {
+        char c = consume();
+        if (c == '\'') {
+            if (!atEnd() && peek() == '\'') {
+                consume();
+                value.push_back('\'');
+                continue;
+            }
+            return value;
+        }
+        if (static_cast<unsigned char>(c) > 127)
+            throw ParseError("Only ASCII string literals are supported");
+        value.push_back(c);
+    }
+    throw ParseError("Unterminated string literal");
+}
+
 bool SQLParser::tryKeyword(const std::string& kw) {
     skipWS();
     size_t saved = pos_;
@@ -237,6 +261,9 @@ std::shared_ptr<ASTExpr> SQLParser::parsePrimary() {
     if (std::isdigit((unsigned char)peek()) || peek() == '-') {
         return ASTExpr::intLiteral(consumeInt());
     }
+
+    if (peek() == '\'')
+        return ASTExpr::stringLiteral(consumeString());
 
     // Identifier (column name or keyword — keywords handled by tryKeyword above)
     auto id = consumeIdent();

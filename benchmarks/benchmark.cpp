@@ -42,9 +42,9 @@ int main() {
 
     // ── Key generation ────────────────────────────────────────────────────
     proto1::FHEParameterSet params;
-    params.id                  = "bfv-257-depth9";
+    params.id                  = "bfv-257-depth12";
     params.plaintextModulus    = 257;
-    params.multiplicativeDepth = 9;
+    params.multiplicativeDepth = 12;
     params.ringDimension       = 128;
 
     std::cout << "Stage 1: Key generation\n";

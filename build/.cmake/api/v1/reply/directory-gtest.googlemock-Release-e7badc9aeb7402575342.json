@@ -1,0 +1,121 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"install_project"
+		],
+		"files" : 
+		[
+			"/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googletest/cmake/internal_utils.cmake",
+			"/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googlemock/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 116,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 301,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 305,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 329,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 329,
+				"parent" : 1
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 10
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "gmock",
+			"destination" : "include",
+			"paths" : 
+			[
+				{
+					"from" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googlemock/include",
+					"to" : "."
+				}
+			],
+			"type" : "directory"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "gmock",
+			"destination" : "lib64",
+			"paths" : 
+			[
+				"lib/libgmock.a"
+			],
+			"targetId" : "gmock::@e3f94eedc5dc07131386",
+			"targetIndex" : 0,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "gmock",
+			"destination" : "lib64",
+			"paths" : 
+			[
+				"lib/libgmock_main.a"
+			],
+			"targetId" : "gmock_main::@e3f94eedc5dc07131386",
+			"targetIndex" : 1,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "gmock",
+			"destination" : "lib64/pkgconfig",
+			"paths" : 
+			[
+				"build/gtest/googletest/generated/gmock.pc"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "gmock",
+			"destination" : "lib64/pkgconfig",
+			"paths" : 
+			[
+				"build/gtest/googletest/generated/gmock_main.pc"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "gtest/googlemock",
+		"source" : "/home/yeager404/Workspace/OpenFHE/openfhe-development/third-party/google-test/googlemock"
+	}
+}
