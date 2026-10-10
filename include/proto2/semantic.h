@@ -23,8 +23,8 @@ public:
 private:
     const Catalog& catalog_;
 
-    void validateExpr(const ASTExpr& expr, const TableSchema& schema);
-    void validateComparison(const ASTExpr& expr, const TableSchema& schema);
+    void validateExpr(const ASTExpr& expr, const SelectStatement& stmt);
+    void validateComparison(const ASTExpr& expr, const SelectStatement& stmt);
 };
 
 } // namespace proto2

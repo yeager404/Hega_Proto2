@@ -21,6 +21,10 @@ public:
                          const PhysicalPlan& plan,
                          const TableSchema& schema,
                          const FHEParamsMeta& fheMeta);
+    QueryPackage encrypt(const SelectStatement& stmt,
+                         const PhysicalPlan& plan,
+                         const Catalog& catalog,
+                         const FHEParamsMeta& fheMeta);
 
 private:
     std::shared_ptr<ClientCryptoContext> ctx_;

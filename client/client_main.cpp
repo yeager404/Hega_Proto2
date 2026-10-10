@@ -86,7 +86,19 @@ static void runSetup(const std::string& keysDir, const std::string& dataDir) {
 
     std::cout << "[Setup] Encrypting employees dataset...\n";
     auto t2 = Clock::now();
-    proto1::ingestCSV(tmpCsv.string(), schema, 10, clientCtx->keyCtx(), *storage);
+    proto1::ingestCSV(tmpCsv.string(), schema, 1, clientCtx->keyCtx(), *storage);
+    const auto departmentsCsv = fs::path(PROTO2_SOURCE_DIR) / "departments.csv";
+    if (!fs::exists(departmentsCsv))
+        throw std::runtime_error("Dataset not found: " + departmentsCsv.string());
+    proto1::TableSchema departmentSchema{"departments",
+        {{"id", proto1::DataType::INT64},
+         {"department_name", proto1::DataType::STRING, 16}}};
+    auto departmentsTmp = fs::temp_directory_path() / "proto2_departments.csv";
+    fs::copy_file(departmentsCsv, departmentsTmp,
+                  fs::copy_options::overwrite_existing);
+    proto1::ingestCSV(departmentsTmp.string(), departmentSchema, 1,
+                      clientCtx->keyCtx(), *storage);
+    fs::remove(departmentsTmp);
     auto t3 = Clock::now();
     std::cout << "[Setup] Encryption + storage: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(t3-t2).count()
@@ -155,6 +167,9 @@ static void printResult(const std::vector<std::string>& cols,
 }
 
 // ── Plaintext reference ───────────────────────────────────────────────────
+#if 0
+// Disabled until plaintext verification is loaded from the same CSV sources
+// and supports every query shape, including JOINs.
 struct PlainRow { int64_t id, age, salary, department_id; const char* name; };
 static const PlainRow PLAIN_DATA[11] = {
     {1,2,5,1,"Alice"},{2,3,6,1,"Bob"},{3,4,7,2,"Carol"},
@@ -228,6 +243,7 @@ static std::vector<ResultRow> executePlaintext(const SelectStatement& stmt) {
     
     return result;
 }
+#endif
 
 // ── Main query pipeline ───────────────────────────────────────────────────
 static void executeQuery(const std::string& sql,
@@ -266,7 +282,7 @@ static void executeQuery(const std::string& sql,
 
     auto ctxPtr = std::make_shared<ClientCryptoContext>(clientCtx.keyCtxPtr());
     QueryEncryptor enc(ctxPtr);
-    auto pkg = enc.encrypt(stmt, physPlan, *schema, fheMeta);
+    auto pkg = enc.encrypt(stmt, physPlan, catalog, fheMeta);
     pkg.queryId = makeQueryId();
     metrics.encryptMs = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now()-t0).count();
 
@@ -323,39 +339,23 @@ static void executeQuery(const std::string& sql,
         : stmt.projections;        // Show only originally requested columns
     printResult(displayCols, allRows);
 
-    // Plaintext verification
-    auto plainRows = executePlaintext(stmt);
-    bool match = (allRows.size() == plainRows.size());
-    if (match) {
-        for (size_t i = 0; i < allRows.size() && match; ++i)
-            for (auto& col : physPlan.projectColumns) {
-                auto it1 = allRows[i].values.find(col);
-                auto it2 = plainRows[i].values.find(col);
-                if (it1 != allRows[i].values.end() ||
-                    it2 != plainRows[i].values.end()) {
-                    if (it1 == allRows[i].values.end() ||
-                        it2 == plainRows[i].values.end() ||
-                        it1->second != it2->second) {
-                        match = false;
-                        break;
-                    }
-                } else {
-                    auto sit1 = allRows[i].stringValues.find(col);
-                    auto sit2 = plainRows[i].stringValues.find(col);
-                    if (sit1 == allRows[i].stringValues.end() ||
-                        sit2 == plainRows[i].stringValues.end() ||
-                        sit1->second != sit2->second) {
-                        match = false;
-                        break;
-                    }
-                }
-            }
-    }
-    std::cout << "\n[Verification] " << (match?"✓ PASS":"✗ FAIL")
-              << " — FHE result " << (match?"matches":"does NOT match")
-              << " plaintext reference\n";
+    // Plaintext verification is disabled. All query results shown above come
+    // from decrypting the server's encrypted result batches.
 
     metrics.print();
+}
+
+static bool hasStatementTerminator(const std::string& sql) {
+    bool inString = false;
+    for (size_t i = 0; i < sql.size(); ++i) {
+        if (sql[i] != '\'') continue;
+        if (inString && i + 1 < sql.size() && sql[i + 1] == '\'') {
+            ++i;
+            continue;
+        }
+        inString = !inString;
+    }
+    return !inString && sql.find(';') != std::string::npos;
 }
 
 // ── main ──────────────────────────────────────────────────────────────────
@@ -409,7 +409,6 @@ int main(int argc, char* argv[]) {
               << "[Client] Type SQL queries. 'exit' or Ctrl-D to quit.\n\n";
 
     std::string line, sql;
-    bool awaitingTerminator = false;
     while (true) {
         std::cout << (sql.empty() ? "SQL> " : "  -> ") << std::flush;
         if (!std::getline(std::cin, line)) break;
@@ -419,41 +418,17 @@ int main(int argc, char* argv[]) {
         if (line.empty()) continue;
 
         sql += (sql.empty() ? "" : " ") + line;
-        bool hasSemi = (sql.find(';') != std::string::npos);
+        if (!hasStatementTerminator(sql)) continue;
 
         try {
             SQLParser testParser;
             testParser.parse(sql);
-            if (hasSemi || !awaitingTerminator) {
-                executeQuery(sql, *clientCtx, transport, catalog);
-                sql.clear();
-                awaitingTerminator = false;
-            }
+            executeQuery(sql, *clientCtx, transport, catalog);
+            sql.clear();
         } catch (ParseError& e) {
             std::string msg = e.what();
-            const bool startsWithSelect =
-                sql.size() >= 6 &&
-                std::equal(sql.begin(), sql.begin() + 6, "SELECT",
-                           [](char lhs, char rhs) {
-                               return std::toupper(static_cast<unsigned char>(lhs)) ==
-                                      std::toupper(static_cast<unsigned char>(rhs));
-                           });
-            const bool incomplete =
-                msg.find("Unexpected end") != std::string::npos ||
-                msg.find("Expected keyword") != std::string::npos ||
-                msg.find("Expected identifier") != std::string::npos ||
-                msg.find("Expected string") != std::string::npos ||
-                msg.find("Expected integer") != std::string::npos ||
-                msg.find("Expected ')'") != std::string::npos;
-            if (!hasSemi && startsWithSelect && incomplete) {
-                // Keep incomplete SELECT statements so multiline input can
-                // continue until the user terminates it with ';'.
-                awaitingTerminator = true;
-            } else {
-                std::cout << "Error: " << msg << "\n";
-                sql.clear();
-                awaitingTerminator = false;
-            }
+            std::cout << "Error: " << msg << "\n";
+            sql.clear();
         }
     }
 

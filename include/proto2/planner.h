@@ -25,6 +25,12 @@ struct LogicalNode {
 
     // Scan
     std::string tableName;
+    std::string tableAlias;
+    std::string joinedTableName;
+    std::string joinedTableAlias;
+    std::string joinLeftColumn;
+    std::string joinRightColumn;
+    bool hasJoin{false};
 
     // Filter
     std::shared_ptr<ASTExpr> predicate; // still plaintext literals
@@ -42,6 +48,12 @@ struct LogicalNode {
 
 struct PhysicalPlan {
     std::string              tableName;
+    std::string              tableAlias;
+    std::string              joinedTableName;
+    std::string              joinedTableAlias;
+    std::string              joinLeftColumn;
+    std::string              joinRightColumn;
+    bool                     hasJoin{false};
     std::vector<std::string> scanColumns;    // all columns needed by scan
     std::vector<std::string> projectColumns; // final output columns
     bool                     hasFilter{false};

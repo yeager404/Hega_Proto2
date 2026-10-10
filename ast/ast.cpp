@@ -51,6 +51,14 @@ std::string SelectStatement::toSQL() const {
         }
     }
     s += " FROM " + tableName;
+    if (!tableAlias.empty() && tableAlias != tableName)
+        s += " AS " + tableAlias;
+    for (const auto& join : joins) {
+        s += " JOIN " + join.rightTable.tableName;
+        if (join.rightTable.alias != join.rightTable.tableName)
+            s += " AS " + join.rightTable.alias;
+        s += " ON " + join.condition->toSQL();
+    }
     if (whereClause)
         s += " WHERE " + whereClause->toSQL();
     if (!orderByColumns.empty()) {

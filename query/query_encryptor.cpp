@@ -36,6 +36,12 @@ QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
                                       const FHEParamsMeta& fheMeta) {
     QueryPackage pkg;
     pkg.tableName      = plan.tableName;
+    pkg.tableAlias     = plan.tableAlias;
+    pkg.hasJoin        = plan.hasJoin;
+    pkg.joinedTableName = plan.joinedTableName;
+    pkg.joinedTableAlias = plan.joinedTableAlias;
+    pkg.joinLeftColumn = plan.joinLeftColumn;
+    pkg.joinRightColumn = plan.joinRightColumn;
     pkg.scanColumns    = plan.scanColumns;
     pkg.projectColumns = plan.projectColumns;
     pkg.fheParams      = fheMeta;
@@ -43,7 +49,9 @@ QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
 
     // Build result schema
     for (auto& col : plan.projectColumns) {
-        auto& cs = schema.column(col);
+        const auto dot = col.find('.');
+        const auto bare = dot == std::string::npos ? col : col.substr(dot + 1);
+        auto& cs = schema.column(bare);
         pkg.resultSchema.push_back({cs.name, cs.type, cs.maxLength});
     }
 
@@ -57,6 +65,38 @@ QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
                       schema);
     }
 
+    return pkg;
+}
+
+QueryPackage QueryEncryptor::encrypt(const SelectStatement& stmt,
+                                      const PhysicalPlan& plan,
+                                      const Catalog& catalog,
+                                      const FHEParamsMeta& fheMeta) {
+    QueryPackage pkg;
+    pkg.tableName = plan.tableName;
+    pkg.tableAlias = plan.tableAlias;
+    pkg.hasJoin = plan.hasJoin;
+    pkg.joinedTableName = plan.joinedTableName;
+    pkg.joinedTableAlias = plan.joinedTableAlias;
+    pkg.joinLeftColumn = plan.joinLeftColumn;
+    pkg.joinRightColumn = plan.joinRightColumn;
+    pkg.scanColumns = plan.scanColumns;
+    pkg.projectColumns = plan.projectColumns;
+    pkg.fheParams = fheMeta;
+    for (const auto& name : plan.projectColumns) {
+        const auto dot = name.find('.');
+        const auto alias = dot == std::string::npos ? plan.tableAlias : name.substr(0, dot);
+        const auto bare = dot == std::string::npos ? name : name.substr(dot + 1);
+        const auto table = alias == plan.tableAlias ? plan.tableName : plan.joinedTableName;
+        const auto& cs = catalog.getTable(table).column(bare);
+        pkg.resultSchema.push_back({name, cs.type, cs.maxLength});
+    }
+    if (stmt.whereClause) {
+        uint32_t nextLiteralId = 0;
+        buildPredNode(*stmt.whereClause, pkg.predicateNodes,
+                      pkg.encryptedLiterals, nextLiteralId,
+                      catalog.getTable(plan.tableName));
+    }
     return pkg;
 }
 
@@ -117,7 +157,10 @@ uint32_t QueryEncryptor::buildPredNode(const ASTExpr& expr,
                     left.kind == ASTExprKind::ColumnRef ? left : right;
                 const ASTExpr& literal =
                     left.kind == ASTExprKind::StringLiteral ? left : right;
-                const auto& columnSchema = schema.column(column.columnName);
+                const auto dot = column.columnName.find('.');
+                const auto bareName = dot == std::string::npos
+                    ? column.columnName : column.columnName.substr(dot + 1);
+                const auto& columnSchema = schema.column(bareName);
                 const uint32_t firstId = addEncryptedString(
                     literal.stringValue,
                     columnSchema.maxLength,

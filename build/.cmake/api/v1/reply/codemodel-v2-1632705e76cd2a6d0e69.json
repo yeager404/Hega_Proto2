@@ -7,35 +7,35 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "OPENFHEbinfhe::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-OPENFHEbinfhe-Release-1e24daf194bb8cd04657.json",
+					"jsonFile" : "target-OPENFHEbinfhe-1e24daf194bb8cd04657.json",
 					"name" : "OPENFHEbinfhe",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "OPENFHEcore::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-OPENFHEcore-Release-cbe125e5d9f4bb9802e4.json",
+					"jsonFile" : "target-OPENFHEcore-cbe125e5d9f4bb9802e4.json",
 					"name" : "OPENFHEcore",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "OPENFHEpke::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-OPENFHEpke-Release-9f66d02d1a271e663fc5.json",
+					"jsonFile" : "target-OPENFHEpke-9f66d02d1a271e663fc5.json",
 					"name" : "OPENFHEpke",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 3,
 					"id" : "Threads::Threads::@b738d542747fbb7ea6e3",
-					"jsonFile" : "target-Threads__Threads-Release-61bc773a3d20615cef07.json",
+					"jsonFile" : "target-Threads__Threads-61bc773a3d20615cef07.json",
 					"name" : "Threads::Threads",
 					"projectIndex" : 3
 				},
 				{
 					"directoryIndex" : 2,
 					"id" : "Threads::Threads::@e3f94eedc5dc07131386",
-					"jsonFile" : "target-Threads__Threads-Release-0f7b8b20bbecad2f10b5.json",
+					"jsonFile" : "target-Threads__Threads-0f7b8b20bbecad2f10b5.json",
 					"name" : "Threads::Threads",
 					"projectIndex" : 2
 				}
@@ -55,7 +55,7 @@
 						1
 					],
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-.-Release-fd6451d79dc282e2f566.json",
+					"jsonFile" : "directory-.-fd6451d79dc282e2f566.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.16"
@@ -79,7 +79,7 @@
 						2
 					],
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-gtest-Release-44b94d00c53bcfbe4741.json",
+					"jsonFile" : "directory-gtest-44b94d00c53bcfbe4741.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.16"
@@ -99,7 +99,7 @@
 						3
 					],
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-gtest.googlemock-Release-e7badc9aeb7402575342.json",
+					"jsonFile" : "directory-gtest.googlemock-e7badc9aeb7402575342.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.13"
@@ -120,7 +120,7 @@
 					],
 					"build" : "gtest/googletest",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-gtest.googletest-Release-3b07661f677e6d772460.json",
+					"jsonFile" : "directory-gtest.googletest-3b07661f677e6d772460.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.13"
@@ -135,7 +135,7 @@
 					]
 				}
 			],
-			"name" : "Release",
+			"name" : "",
 			"projects" : 
 			[
 				{
@@ -220,70 +220,70 @@
 				{
 					"directoryIndex" : 2,
 					"id" : "gmock::@e3f94eedc5dc07131386",
-					"jsonFile" : "target-gmock-Release-343f96797501eb1b6bae.json",
+					"jsonFile" : "target-gmock-655787f150fde1cb0aac.json",
 					"name" : "gmock",
 					"projectIndex" : 2
 				},
 				{
 					"directoryIndex" : 2,
 					"id" : "gmock_main::@e3f94eedc5dc07131386",
-					"jsonFile" : "target-gmock_main-Release-d123f16b656ea96df94c.json",
+					"jsonFile" : "target-gmock_main-786370d6d4dc81cde808.json",
 					"name" : "gmock_main",
 					"projectIndex" : 2
 				},
 				{
 					"directoryIndex" : 3,
 					"id" : "gtest::@b738d542747fbb7ea6e3",
-					"jsonFile" : "target-gtest-Release-275edefe64bafc9a816e.json",
+					"jsonFile" : "target-gtest-43309e4ac4c8c4aa7be0.json",
 					"name" : "gtest",
 					"projectIndex" : 3
 				},
 				{
 					"directoryIndex" : 3,
 					"id" : "gtest_main::@b738d542747fbb7ea6e3",
-					"jsonFile" : "target-gtest_main-Release-f2833ec45cde5f8c6085.json",
+					"jsonFile" : "target-gtest_main-3239b832bfe581ff9f33.json",
 					"name" : "gtest_main",
 					"projectIndex" : 3
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "proto1::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-proto1-Release-e6c5726206b1342764f0.json",
+					"jsonFile" : "target-proto1-133af63c09d8453c9551.json",
 					"name" : "proto1",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "proto2::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-proto2-Release-9afbf4e92462b76f5c41.json",
+					"jsonFile" : "target-proto2-c6d96359a1769b0490fa.json",
 					"name" : "proto2",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "prototype2_benchmark::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-prototype2_benchmark-Release-8beb0f0597647d9f0c97.json",
+					"jsonFile" : "target-prototype2_benchmark-1fbf6853d8ffccb4932c.json",
 					"name" : "prototype2_benchmark",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "prototype2_client::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-prototype2_client-Release-c2b616d16cea881fe828.json",
+					"jsonFile" : "target-prototype2_client-d345b7dacd46d903d39c.json",
 					"name" : "prototype2_client",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "prototype2_server::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-prototype2_server-Release-0f6c33b072b590137455.json",
+					"jsonFile" : "target-prototype2_server-0b2330c06f96a3c8b0c9.json",
 					"name" : "prototype2_server",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "prototype2_tests::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-prototype2_tests-Release-a0fbd6be1f5e3a34a0b9.json",
+					"jsonFile" : "target-prototype2_tests-459aef56f7f26083cb5c.json",
 					"name" : "prototype2_tests",
 					"projectIndex" : 0
 				}

@@ -3,7 +3,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "libproto2.a"
+			"path" : "libproto1.a"
 		}
 	],
 	"backtrace" : 1,
@@ -27,13 +27,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 51,
+				"line" : 37,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 67,
+				"line" : 48,
 				"parent" : 0
 			},
 			{
@@ -89,7 +89,15 @@
 	[
 		{
 			"backtrace" : 2,
-			"id" : "proto1::@6890427a1f51a3e7e1df"
+			"id" : "OPENFHEcore::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEpke::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEbinfhe::@6890427a1f51a3e7e1df"
 		}
 	],
 	"compileGroups" : 
@@ -98,7 +106,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : " -Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -O3 -DNDEBUG -std=gnu++17"
+					"fragment" : " -Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -std=gnu++17"
 				}
 			],
 			"includes" : 
@@ -151,46 +159,66 @@
 				5,
 				6,
 				7,
-				8,
-				9,
-				10,
-				11,
-				12,
-				13
+				8
 			]
 		}
 	],
-	"dependencies" : 
-	[
-		{
-			"backtrace" : 2,
-			"id" : "proto1::@6890427a1f51a3e7e1df"
-		}
-	],
-	"id" : "proto2::@6890427a1f51a3e7e1df",
+	"id" : "proto1::@6890427a1f51a3e7e1df",
 	"interfaceCompileDependencies" : 
 	[
 		{
 			"backtrace" : 2,
-			"id" : "proto1::@6890427a1f51a3e7e1df"
+			"id" : "OPENFHEcore::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEpke::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEbinfhe::@6890427a1f51a3e7e1df"
 		}
 	],
 	"interfaceLinkLibraries" : 
 	[
 		{
 			"backtrace" : 2,
-			"id" : "proto1::@6890427a1f51a3e7e1df"
+			"id" : "OPENFHEcore::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEpke::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEbinfhe::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"fragment" : "-fopenmp"
 		}
 	],
 	"linkLibraries" : 
 	[
 		{
 			"backtrace" : 2,
-			"id" : "proto1::@6890427a1f51a3e7e1df"
+			"id" : "OPENFHEcore::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEpke::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "OPENFHEbinfhe::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"fragment" : "-fopenmp"
 		}
 	],
-	"name" : "proto2",
-	"nameOnDisk" : "libproto2.a",
+	"name" : "proto1",
+	"nameOnDisk" : "libproto1.a",
 	"paths" : 
 	{
 		"build" : ".",
@@ -210,12 +238,7 @@
 				5,
 				6,
 				7,
-				8,
-				9,
-				10,
-				11,
-				12,
-				13
+				8
 			]
 		}
 	],
@@ -224,85 +247,55 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "ast/ast.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/crypto/bfv_context.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "parser/parser.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/storage/filesystem_storage.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "catalog/catalog.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/execution/encrypted_batch.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "semantic/semantic.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/execution/operators.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "planner/planner.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/expression/expression_executor.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "crypto/crypto_context.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/result/result_stream.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "query/query_package.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/client/client.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "query/query_encryptor.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/catalog/ingestion.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "query/query_validator.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "execution/query_executor.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "result/result.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "result/result_decoder.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "transport/transport.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "transport/metrics.cpp",
+			"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 1/src/planner/plan_validator.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

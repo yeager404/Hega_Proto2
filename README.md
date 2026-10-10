@@ -35,6 +35,14 @@ Then at the `SQL>` prompt:
 SELECT id, salary FROM employees WHERE id = 10 AND age > 3;
 SELECT * FROM employees WHERE age >= 5 ORDER BY salary DESC LIMIT 3;
 SELECT id, age FROM employees WHERE id != 5 ORDER BY age ASC;
+SELECT id, name FROM employees WHERE name = 'Alice';
+SELECT e.id, e.name, d.department_name
+FROM employees AS e
+JOIN departments AS d ON e.department_id = d.id;
+SELECT e.id, e.age, d.department_name
+FROM employees e
+JOIN departments d ON e.department_id = d.id
+WHERE e.age > 5;
 ```
 
 Expected output (first query):
@@ -43,15 +51,13 @@ id | salary
 ---+-------
 10 | 14
 (1 row)
-
-[Verification] ✓ PASS — FHE result matches plaintext reference
 ```
 
 ## Run Tests
 
 ```bash
 cd build && ctest --output-on-failure
-# 35/35 tests pass
+# 69/69 tests pass
 ```
 
 ## Run Benchmark
@@ -64,47 +70,98 @@ cd build && ctest --output-on-failure
 
 ```sql
 SELECT col1, col2, ...   -- or SELECT *
-FROM table
+FROM table [AS alias]
+[INNER] JOIN table [AS alias] ON qualified_column = qualified_column
 [WHERE expr]
-[ORDER BY col1 [ASC|DESC], col2 [ASC|DESC], ...]
+[ORDER BY column [ASC|DESC], column [ASC|DESC], ...]
 [LIMIT n]
 
 -- Expressions:
 column = literal
 column != literal
-column > literal
-column < literal
-column >= literal
-column <= literal
+column > integer
+column < integer
+column >= integer
+column <= integer
 expr AND expr
 expr OR expr
 NOT expr
 ```
+
+### Supported query examples
+
+Single-table filtering:
+
+```sql
+SELECT id, salary
+FROM employees
+WHERE id = 10 AND age > 3;
+```
+
+String equality and inequality:
+
+```sql
+SELECT id, name
+FROM employees
+WHERE name = 'Alice';
+
+SELECT id
+FROM employees
+WHERE name != 'Alice';
+```
+
+Inner equality JOIN:
+
+```sql
+SELECT e.id, e.name, d.department_name
+FROM employees AS e
+JOIN departments AS d
+  ON e.department_id = d.id;
+```
+
+JOIN with a left-table WHERE predicate:
+
+```sql
+SELECT e.id, e.age, d.department_name
+FROM employees e
+JOIN departments d
+  ON e.department_id = d.id
+WHERE e.age > 5;
+```
+
+`WHERE` predicates and JOIN equality masks are evaluated over encrypted
+ciphertexts on the server. `ORDER BY` and `LIMIT` are applied by the client
+after result decryption.
 
 ## Supported Tables
 
 ```
 employees: id INT64, age INT64, salary INT64, department_id INT64,
            name STRING(16)
+departments: id INT64, department_name STRING(16)
 ```
 
 Values must be in [0, 128] due to BFV plaintext modulus p=257.
 String columns use fixed-width ASCII encoding. String predicates currently
-support `=` and `!=`; Unicode, `LIKE`, and string ordering are not supported.
-String columns use fixed-width ASCII encoding (maximum length is schema-defined);
-the default `employees.name` column supports up to 16 ASCII characters.
-String predicates currently support `=` and `!=`.
+support `=` and `!=`; the configured sample columns support up to 16 ASCII
+characters. Unicode, `LIKE`, and string ordering are not supported.
 
 ## Unsupported (Future Work)
 
-- JOIN, GROUP BY, aggregates
+- LEFT/RIGHT/FULL OUTER JOIN, CROSS JOIN, multiple JOIN clauses
+- Non-equality JOIN conditions
+- GROUP BY, aggregates, HAVING
 - NULL, BETWEEN, IN, LIKE
 - String ordering comparisons and Unicode strings
-- Multiple tables
 - Transactions, MVCC, WAL
 - Distributed sharding
 - Encrypted indexes / ORAM
 - Full query structure confidentiality
+
+The current JOIN executor uses encrypted nested-loop evaluation and the setup
+path ingests JOIN test data with one logical row per encrypted chunk. This is
+correct but substantially slower than the single-table execution path for
+larger datasets.
 
 ## Architecture
 

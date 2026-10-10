@@ -59,6 +59,10 @@ public:
         return it->second;
     }
 
+    bool hasColumn(const std::string& table, const std::string& column) const {
+        return hasTable(table) && getTable(table).hasColumn(column);
+    }
+
     // Schema version — increment when tables change.
     uint32_t version() const { return version_; }
     void bumpVersion()       { ++version_; }

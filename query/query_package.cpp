@@ -35,7 +35,9 @@ void serialize(Archive& ar, proto2::ColumnSchema& c) {
 template <class Archive>
 void serialize(Archive& ar, proto2::QueryPackage& p) {
     ar(p.queryId, p.protocolVersion, p.schemaVersion,
-       p.tableName, p.scanColumns, p.projectColumns,
+       p.tableName, p.tableAlias, p.joinedTableName, p.joinedTableAlias,
+       p.joinLeftColumn, p.joinRightColumn, p.hasJoin,
+       p.scanColumns, p.projectColumns,
        p.resultSchema, p.predicateNodes, p.encryptedLiterals,
        p.fheParams, p.shardId, p.partitionId);
 }

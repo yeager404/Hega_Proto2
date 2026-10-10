@@ -300,6 +300,8 @@ id | salary
  9 | 13
  8 | 12
 (3 rows)
-
-[Verification] ✓ PASS — FHE result matches plaintext reference
 ```
+
+The client does not run a separate plaintext reference verification path.
+The displayed rows are produced by decrypting the encrypted result returned
+by the server.

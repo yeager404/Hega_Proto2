@@ -24,6 +24,116 @@ std::vector<EncryptedResultBatch>
 QueryExecutor::execute(const QueryPackage& pkg) {
     auto fheCtx = serverCtx_->keyCtxPtr();
 
+    if (pkg.hasJoin) {
+        const auto leftPrefix = pkg.tableAlias + ".";
+        const auto rightPrefix = pkg.joinedTableAlias + ".";
+        if (pkg.joinLeftColumn.compare(0, leftPrefix.size(), leftPrefix) != 0 ||
+            pkg.joinRightColumn.compare(0, rightPrefix.size(), rightPrefix) != 0)
+            throw std::runtime_error("JOIN columns must be qualified by their aliases");
+        const auto leftKey = pkg.joinLeftColumn.substr(pkg.tableAlias.size() + 1);
+        const auto rightKey = pkg.joinRightColumn.substr(pkg.joinedTableAlias.size() + 1);
+        const auto leftChunks = storage_->listChunks(pkg.tableName, leftKey);
+        const auto rightChunks = storage_->listChunks(pkg.joinedTableName, rightKey);
+        std::vector<EncryptedResultBatch> results;
+        uint32_t batchId = 0;
+        proto1::ExpressionExecutor exprExec(fheCtx);
+        auto addTableColumns = [&](proto1::EncryptedBatch& batch,
+                                    const std::string& table,
+                                    const std::string& alias,
+                                    uint32_t chunkId) {
+            for (const auto& schemaColumn : catalog_.getTable(table).columns) {
+                if (schemaColumn.type == DataType::STRING) {
+                    for (size_t position = 0; position < schemaColumn.maxLength; ++position) {
+                        const auto physical = proto1::stringPhysicalColumn(
+                            schemaColumn.name, position);
+                        auto chunk = storage_->getChunk(table, physical, 0, chunkId);
+                        batch.columns[alias + "." + physical] = std::move(chunk);
+                    }
+                } else {
+                    auto chunk = storage_->getChunk(table, schemaColumn.name, 0, chunkId);
+                    batch.columns[alias + "." + schemaColumn.name] = std::move(chunk);
+                }
+            }
+        };
+        std::shared_ptr<proto1::Expression> where;
+        if (!pkg.predicateNodes.empty())
+            where = buildExpression(pkg,
+                static_cast<uint32_t>(pkg.predicateNodes.size() - 1));
+        const auto whereUsesJoinedTable = [&]() {
+            for (const auto& node : pkg.predicateNodes) {
+                if (node.kind == PredNodeKind::ColumnRef &&
+                    node.columnName.compare(0, rightPrefix.size(), rightPrefix) == 0)
+                    return true;
+            }
+            return false;
+        }();
+        for (const auto& lm : leftChunks) {
+            auto leftJoin = storage_->getChunk(pkg.tableName, leftKey, lm.partitionId, lm.chunkId);
+            if (leftJoin.meta.logicalRowCount != 1)
+                throw std::runtime_error("JOIN requires setup data ingested with chunk size 1");
+            std::shared_ptr<proto1::EncryptedVector> leftMask;
+            if (where && !whereUsesJoinedTable) {
+                proto1::EncryptedBatch leftOnly;
+                leftOnly.logicalRowCount = 1;
+                addTableColumns(leftOnly, pkg.tableName, pkg.tableAlias, lm.chunkId);
+                leftMask = exprExec.evaluate(*where, leftOnly);
+            }
+            for (const auto& rm : rightChunks) {
+                auto rightJoin = storage_->getChunk(pkg.joinedTableName, rightKey,
+                                                     rm.partitionId, rm.chunkId);
+                if (rightJoin.meta.logicalRowCount != 1)
+                    throw std::runtime_error("JOIN requires setup data ingested with chunk size 1");
+                proto1::EncryptedBatch pair;
+                pair.logicalRowCount = 1;
+                addTableColumns(pair, pkg.tableName, pkg.tableAlias, lm.chunkId);
+                addTableColumns(pair, pkg.joinedTableName, pkg.joinedTableAlias, rm.chunkId);
+                auto joinExpr = proto1::Expression::equal(
+                    proto1::Expression::columnRef(pkg.joinLeftColumn),
+                    proto1::Expression::columnRef(pkg.joinRightColumn));
+                auto mask = exprExec.evaluate(*joinExpr, pair);
+                if (whereUsesJoinedTable) {
+                    auto pairWhereMask = exprExec.evaluate(*where, pair);
+                    mask = fheCtx->evalMult(*mask, *pairWhereMask);
+                } else if (leftMask) {
+                    mask = fheCtx->evalMult(*mask, *leftMask);
+                }
+                EncryptedResultBatch rb;
+                rb.batchId = batchId++;
+                rb.logicalRowCount = 1;
+                for (const auto& name : pkg.projectColumns) {
+                    const auto dot = name.find('.');
+                    const auto alias = dot == std::string::npos
+                        ? pkg.tableAlias : name.substr(0, dot);
+                    const auto bare = dot == std::string::npos
+                        ? name : name.substr(dot + 1);
+                    const auto table = alias == pkg.tableAlias
+                        ? pkg.tableName : pkg.joinedTableName;
+                    const auto chunkId = alias == pkg.tableAlias ? lm.chunkId : rm.chunkId;
+                    const auto& cs = catalog_.getTable(table).column(bare);
+                    const size_t width = cs.type == DataType::STRING ? cs.maxLength : 1;
+                    for (size_t position = 0; position < width; ++position) {
+                        const auto physical = cs.type == DataType::STRING
+                            ? proto1::stringPhysicalColumn(bare, position) : bare;
+                        auto chunk = storage_->getChunk(table, physical, 0, chunkId);
+                        if (chunk.ciphertexts.empty())
+                            throw std::runtime_error("JOIN result column has no ciphertext");
+                        EncryptedColumnResult cr;
+                        cr.columnName = name;
+                        cr.logicalType = cs.type == DataType::STRING ? "STRING" : "INT64";
+                        cr.stringPosition = static_cast<uint32_t>(position);
+                        cr.ciphertextBytes = chunk.ciphertexts[0]->serialize();
+                        cr.logicalSize = chunk.ciphertexts[0]->logicalSize();
+                        rb.columns.push_back(std::move(cr));
+                    }
+                }
+                rb.selectionMaskBytes = mask->serialize();
+                rb.hasMask = true;
+                results.push_back(std::move(rb));
+            }
+        }
+        return results;
+    }
+
     // Build physical plan: ProjectExec -> FilterExec -> TableScanExec
     std::vector<std::string> physicalScanColumns;
     for (const auto& column : pkg.scanColumns) {

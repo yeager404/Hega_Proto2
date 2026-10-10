@@ -113,8 +113,8 @@
 - [x] Client applies selection mask
 - [x] Client reconstructs rows
 - [x] Terminal prints correct result
-- [x] Result matches plaintext reference
-- [x] Tests pass (35/35)
+- [ ] Plaintext reference verification
+- [x] Tests pass (69/69)
 - [x] Documentation exists
 - [x] Benchmark exists
 - [x] No fake FHE implementation used

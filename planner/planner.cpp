@@ -14,6 +14,17 @@ LogicalPlanner::plan(const SelectStatement& stmt, const TableSchema& schema) {
     auto scan = std::make_shared<LogicalNode>();
     scan->kind      = LogicalNodeKind::Scan;
     scan->tableName = stmt.tableName;
+    scan->tableAlias = stmt.tableAlias;
+    if (!stmt.joins.empty()) {
+        const auto& join = stmt.joins.front();
+        if (!join.condition || join.condition->kind != ASTExprKind::Equal)
+            throw std::runtime_error("Only equality JOINs are supported");
+        scan->hasJoin = true;
+        scan->joinedTableName = join.rightTable.tableName;
+        scan->joinedTableAlias = join.rightTable.alias;
+        scan->joinLeftColumn = join.condition->left->columnName;
+        scan->joinRightColumn = join.condition->right->columnName;
+    }
 
     // Filter (if WHERE clause present)
     std::shared_ptr<LogicalNode> filterOrScan = scan;
@@ -54,8 +65,11 @@ LogicalPlanner::plan(const SelectStatement& stmt, const TableSchema& schema) {
 // Collect all column references from an expression.
 static void collectColumns(const ASTExpr& expr, std::vector<std::string>& cols) {
     if (expr.kind == ASTExprKind::ColumnRef) {
-        if (std::find(cols.begin(), cols.end(), expr.columnName) == cols.end())
-            cols.push_back(expr.columnName);
+        const auto dot = expr.columnName.find('.');
+        const auto bare = dot == std::string::npos
+            ? expr.columnName : expr.columnName.substr(dot + 1);
+        if (std::find(cols.begin(), cols.end(), bare) == cols.end())
+            cols.push_back(bare);
         return;
     }
     if (expr.left)  collectColumns(*expr.left, cols);
@@ -69,6 +83,8 @@ PhysicalPlan PhysicalPlanner::plan(const LogicalNode& logical) {
 
     PhysicalPlan pp;
     pp.projectColumns = logical.columns;
+    pp.tableAlias = logical.child->kind == LogicalNodeKind::Scan
+        ? logical.child->tableAlias : logical.child->child->tableAlias;
 
     auto* node = logical.child.get();
     if (!node) throw std::runtime_error("PhysicalPlanner: no child under Project");
@@ -85,11 +101,21 @@ PhysicalPlan PhysicalPlanner::plan(const LogicalNode& logical) {
         throw std::runtime_error("PhysicalPlanner: expected Scan");
 
     pp.tableName = node->tableName;
+    pp.hasJoin = node->hasJoin;
+    pp.joinedTableName = node->joinedTableName;
+    pp.joinedTableAlias = node->joinedTableAlias;
+    pp.joinLeftColumn = node->joinLeftColumn;
+    pp.joinRightColumn = node->joinRightColumn;
 
     // Scan must include all projected columns + predicate columns
     for (auto& c : pp.projectColumns) {
-        if (std::find(pp.scanColumns.begin(), pp.scanColumns.end(), c) == pp.scanColumns.end())
-            pp.scanColumns.push_back(c);
+        const auto dot = c.find('.');
+        if (pp.hasJoin && dot != std::string::npos &&
+            c.substr(0, dot) == pp.joinedTableAlias)
+            continue;
+        const auto bare = dot == std::string::npos ? c : c.substr(dot + 1);
+        if (std::find(pp.scanColumns.begin(), pp.scanColumns.end(), bare) == pp.scanColumns.end())
+            pp.scanColumns.push_back(bare);
     }
 
     return pp;

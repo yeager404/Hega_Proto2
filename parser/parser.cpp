@@ -63,6 +63,16 @@ std::string SQLParser::consumeIdent() {
     return id;
 }
 
+std::string SQLParser::consumeQualifiedIdent() {
+    auto name = consumeIdent();
+    skipWS();
+    if (!atEnd() && peek() == '.') {
+        consume();
+        name += "." + consumeIdent();
+    }
+    return name;
+}
+
 int64_t SQLParser::consumeInt() {
     skipWS();
     bool neg = false;
@@ -127,7 +137,19 @@ SelectStatement SQLParser::parseSelect() {
     SelectStatement stmt;
     stmt.projections = parseProjectionList();
     expectKeyword("FROM");
-    stmt.tableName = consumeIdent();
+    auto from = parseTableRef();
+    stmt.tableName = from.tableName;
+    stmt.tableAlias = from.alias;
+    while (true) {
+        skipWS();
+        if (tryKeyword("INNER")) {}
+        if (!tryKeyword("JOIN")) break;
+        JoinClause join;
+        join.rightTable = parseTableRef();
+        expectKeyword("ON");
+        join.condition = parseExpr();
+        stmt.joins.push_back(std::move(join));
+    }
     skipWS();
     if (tryKeyword("WHERE"))
         stmt.whereClause = parseExpr();
@@ -136,6 +158,7 @@ SelectStatement SQLParser::parseSelect() {
         expectKeyword("BY");
         stmt.orderByColumns = parseOrderByList();
     }
+
     skipWS();
     if (tryKeyword("LIMIT")) {
         stmt.limitCount = consumeInt();
@@ -145,6 +168,30 @@ SelectStatement SQLParser::parseSelect() {
     return stmt;
 }
 
+TableRef SQLParser::parseTableRef() {
+    TableRef ref;
+    ref.tableName = consumeIdent();
+    ref.alias = ref.tableName;
+    skipWS();
+    if (tryKeyword("AS")) {
+        ref.alias = consumeIdent();
+    } else {
+        size_t saved = pos_;
+        try {
+            auto candidate = consumeIdent();
+            if (candidate != "WHERE" && candidate != "ORDER" &&
+                candidate != "LIMIT" && candidate != "JOIN" &&
+                candidate != "INNER" && candidate != "ON")
+                ref.alias = candidate;
+            else
+                pos_ = saved;
+        } catch (const ParseError&) {
+            pos_ = saved;
+        }
+    }
+    return ref;
+}
+
 std::vector<std::string> SQLParser::parseProjectionList() {
     skipWS();
     if (!atEnd() && peek() == '*') {
@@ -152,11 +199,11 @@ std::vector<std::string> SQLParser::parseProjectionList() {
         return {}; // empty = SELECT *
     }
     std::vector<std::string> cols;
-    cols.push_back(consumeIdent());
+    cols.push_back(consumeQualifiedIdent());
     skipWS();
     while (!atEnd() && peek() == ',') {
         consume();
-        cols.push_back(consumeIdent());
+        cols.push_back(consumeQualifiedIdent());
         skipWS();
     }
     return cols;
@@ -165,7 +212,7 @@ std::vector<std::string> SQLParser::parseProjectionList() {
 std::vector<OrderByColumn> SQLParser::parseOrderByList() {
     std::vector<OrderByColumn> cols;
     OrderByColumn col;
-    col.columnName = consumeIdent();
+    col.columnName = consumeQualifiedIdent();
     skipWS();
     // Check for ASC or DESC
     if (tryKeyword("DESC")) {
@@ -180,7 +227,7 @@ std::vector<OrderByColumn> SQLParser::parseOrderByList() {
     while (!atEnd() && peek() == ',') {
         consume();
         OrderByColumn nextCol;
-        nextCol.columnName = consumeIdent();
+        nextCol.columnName = consumeQualifiedIdent();
         skipWS();
         if (tryKeyword("DESC")) {
             nextCol.direction = SortDirection::Descending;
@@ -266,7 +313,7 @@ std::shared_ptr<ASTExpr> SQLParser::parsePrimary() {
         return ASTExpr::stringLiteral(consumeString());
 
     // Identifier (column name or keyword — keywords handled by tryKeyword above)
-    auto id = consumeIdent();
+    auto id = consumeQualifiedIdent();
     return ASTExpr::columnRef(id);
 }
 

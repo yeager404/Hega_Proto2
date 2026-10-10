@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "bin/prototype2_client"
+			"path" : "bin/prototype2_server"
 		}
 	],
 	"backtrace" : 1,
@@ -17,7 +17,6 @@
 			"set_target_properties",
 			"include",
 			"find_package",
-			"target_compile_definitions",
 			"include_directories"
 		],
 		"files" : 
@@ -34,7 +33,7 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 74,
+				"line" : 70,
 				"parent" : 0
 			},
 			{
@@ -52,7 +51,7 @@
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 75,
+				"line" : 71,
 				"parent" : 0
 			},
 			{
@@ -96,47 +95,41 @@
 			{
 				"command" : 7,
 				"file" : 0,
-				"line" : 76,
-				"parent" : 0
-			},
-			{
-				"command" : 8,
-				"file" : 0,
 				"line" : 16,
 				"parent" : 0
 			},
 			{
-				"command" : 8,
+				"command" : 7,
 				"file" : 0,
 				"line" : 17,
 				"parent" : 0
 			},
 			{
-				"command" : 8,
+				"command" : 7,
 				"file" : 0,
 				"line" : 18,
 				"parent" : 0
 			},
 			{
-				"command" : 8,
+				"command" : 7,
 				"file" : 0,
 				"line" : 19,
 				"parent" : 0
 			},
 			{
-				"command" : 8,
+				"command" : 7,
 				"file" : 0,
 				"line" : 20,
 				"parent" : 0
 			},
 			{
-				"command" : 8,
+				"command" : 7,
 				"file" : 0,
 				"line" : 34,
 				"parent" : 0
 			},
 			{
-				"command" : 8,
+				"command" : 7,
 				"file" : 0,
 				"line" : 35,
 				"parent" : 0
@@ -161,44 +154,37 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : " -Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -O3 -DNDEBUG -std=gnu++17"
-				}
-			],
-			"defines" : 
-			[
-				{
-					"backtrace" : 12,
-					"define" : "PROTO2_SOURCE_DIR=\"/home/yeager404/Workspace/OpenFHE/Prototype 2\""
+					"fragment" : " -Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -std=gnu++17"
 				}
 			],
 			"includes" : 
 			[
 				{
-					"backtrace" : 13,
+					"backtrace" : 12,
 					"path" : "/usr/local/include/openfhe"
 				},
 				{
-					"backtrace" : 14,
+					"backtrace" : 13,
 					"path" : "/usr/local/include/openfhe/third-party/include"
 				},
 				{
-					"backtrace" : 15,
+					"backtrace" : 14,
 					"path" : "/usr/local/include/openfhe/core"
 				},
 				{
-					"backtrace" : 16,
+					"backtrace" : 15,
 					"path" : "/usr/local/include/openfhe/pke"
 				},
 				{
-					"backtrace" : 17,
+					"backtrace" : 16,
 					"path" : "/usr/local/include/openfhe/binfhe"
 				},
 				{
-					"backtrace" : 18,
+					"backtrace" : 17,
 					"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 2/../Prototype 1/include"
 				},
 				{
-					"backtrace" : 19,
+					"backtrace" : 18,
 					"path" : "/home/yeager404/Workspace/OpenFHE/Prototype 2/include"
 				}
 			],
@@ -228,13 +214,13 @@
 			"id" : "proto2::@6890427a1f51a3e7e1df"
 		}
 	],
-	"id" : "prototype2_client::@6890427a1f51a3e7e1df",
+	"id" : "prototype2_server::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "-Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -O3 -DNDEBUG",
+				"fragment" : "-Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp",
 				"role" : "flags"
 			},
 			{
@@ -296,8 +282,8 @@
 			"id" : "proto2::@6890427a1f51a3e7e1df"
 		}
 	],
-	"name" : "prototype2_client",
-	"nameOnDisk" : "prototype2_client",
+	"name" : "prototype2_server",
+	"nameOnDisk" : "prototype2_server",
 	"paths" : 
 	{
 		"build" : ".",
@@ -318,7 +304,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "client/client_main.cpp",
+			"path" : "server/server_main.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

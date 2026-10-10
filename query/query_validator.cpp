@@ -27,7 +27,12 @@ void QueryValidator::validate(const QueryPackage& pkg) const {
 
     // Validate project columns
     for (auto& col : pkg.projectColumns) {
-        if (!schema.hasColumn(col))
+        const auto dot = col.find('.');
+        const auto alias = dot == std::string::npos ? pkg.tableAlias : col.substr(0, dot);
+        const auto bare = dot == std::string::npos ? col : col.substr(dot + 1);
+        const auto& target = pkg.hasJoin && alias == pkg.joinedTableAlias
+            ? catalog_.getTable(pkg.joinedTableName) : schema;
+        if (!target.hasColumn(bare))
             throw ValidationError("Unknown project column '" + col +
                                   "' in table '" + pkg.tableName + "'");
     }
@@ -61,8 +66,17 @@ void QueryValidator::validatePredTree(const QueryPackage& pkg,
 
     switch (node.kind) {
         case PredNodeKind::ColumnRef:
-            if (!schema.hasColumn(node.columnName))
+            {
+            const auto dot = node.columnName.find('.');
+            const auto alias = dot == std::string::npos ? pkg.tableAlias :
+                node.columnName.substr(0, dot);
+            const auto bare = dot == std::string::npos ? node.columnName :
+                node.columnName.substr(dot + 1);
+            const auto& target = pkg.hasJoin && alias == pkg.joinedTableAlias
+                ? catalog_.getTable(pkg.joinedTableName) : schema;
+            if (!target.hasColumn(bare))
                 throw ValidationError("Unknown column in predicate: " + node.columnName);
+            }
             return;
 
         case PredNodeKind::LiteralRef: {

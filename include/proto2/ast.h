@@ -97,10 +97,22 @@ struct OrderByColumn {
     SortDirection direction{SortDirection::Ascending};
 };
 
-// SELECT col1, col2, ... FROM table [WHERE expr] [ORDER BY ...] [LIMIT n]
+struct TableRef {
+    std::string tableName;
+    std::string alias;
+};
+
+struct JoinClause {
+    TableRef rightTable;
+    std::shared_ptr<ASTExpr> condition;
+};
+
+// SELECT ... FROM table [JOIN table ON expr] [WHERE expr] ...
 struct SelectStatement {
     std::vector<std::string>  projections; // column names; empty = *
     std::string               tableName;
+    std::string               tableAlias;
+    std::vector<JoinClause>   joins;
     std::shared_ptr<ASTExpr>  whereClause; // nullptr if no WHERE
     std::vector<OrderByColumn> orderByColumns; // empty if no ORDER BY
     int64_t                   limitCount{-1}; // -1 if no LIMIT

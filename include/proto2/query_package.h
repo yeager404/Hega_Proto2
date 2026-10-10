@@ -73,6 +73,12 @@ struct QueryPackage {
 
     // Target
     std::string              tableName;
+    std::string              tableAlias;
+    std::string              joinedTableName;
+    std::string              joinedTableAlias;
+    std::string              joinLeftColumn;
+    std::string              joinRightColumn;
+    bool                     hasJoin{false};
     std::vector<std::string> scanColumns;    // columns needed for execution
     std::vector<std::string> projectColumns; // columns in result
 

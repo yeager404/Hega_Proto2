@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "STRING",
-			"value" : "Release"
+			"value" : ""
 		},
 		{
 			"name" : "CMAKE_CACHEFILE_DIR",

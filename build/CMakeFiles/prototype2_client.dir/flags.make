@@ -6,5 +6,5 @@ CXX_DEFINES = -DPROTO2_SOURCE_DIR="\"/home/yeager404/Workspace/OpenFHE/Prototype
 
 CXX_INCLUDES = -I/usr/local/include/openfhe -I/usr/local/include/openfhe/third-party/include -I/usr/local/include/openfhe/core -I/usr/local/include/openfhe/pke -I/usr/local/include/openfhe/binfhe -I"/home/yeager404/Workspace/OpenFHE/Prototype 2/../Prototype 1/include" -I"/home/yeager404/Workspace/OpenFHE/Prototype 2/include"
 
-CXX_FLAGS =  -Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -O3 -DNDEBUG -std=gnu++17
+CXX_FLAGS =  -Wall -Werror -DOPENFHE_VERSION=1.5.1 -Wno-parentheses -O3 -DMATHBACKEND=4 -fopenmp -std=gnu++17
 

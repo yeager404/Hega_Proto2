@@ -86,7 +86,7 @@ struct E2ECtx {
     ~E2ECtx() { cleanup(); }
     void cleanup() { if (!tmpDir.empty()) { fs::remove_all(tmpDir); tmpDir.clear(); } }
 
-    static E2ECtx create() {
+    static E2ECtx create(size_t chunkSize = 10) {
         E2ECtx c;
         auto ts = std::chrono::high_resolution_clock::now().time_since_epoch().count();
         c.tmpDir = (fs::temp_directory_path() / ("p2e2e_" + std::to_string(ts))).string();
@@ -119,8 +119,20 @@ struct E2ECtx {
 
         fs::create_directories(dataDir);
         auto stor = proto1::makeFilesystemStorage(dataDir, c.clientCtx->keyCtxPtr());
-        proto1::ingestCSV(csvPath, schema, 10, c.clientCtx->keyCtx(), *stor);
+        proto1::ingestCSV(csvPath, schema, chunkSize, c.clientCtx->keyCtx(), *stor);
         fs::remove(csvPath);
+
+        static const char* DEPARTMENTS_CSV =
+            "id,department_name\n"
+            "1,Engineering\n2,Research\n3,Finance\n4,Sales\n5,Support\n";
+        std::string departmentsPath = c.tmpDir + "/departments.csv";
+        { std::ofstream f(departmentsPath); f << DEPARTMENTS_CSV; }
+        proto1::TableSchema departmentSchema{"departments",
+            {{"id", proto1::DataType::INT64},
+             {"department_name", proto1::DataType::STRING, 16}}};
+        proto1::ingestCSV(departmentsPath, departmentSchema, 1,
+                          c.clientCtx->keyCtx(), *stor);
+        fs::remove(departmentsPath);
 
         // Server context wraps the SAME underlying FHEKeyContext as client.
         // This avoids ReleaseAllContexts invalidating the ciphertexts.
@@ -147,7 +159,9 @@ struct E2ECtx {
         meta.keyId      = "key-0";
 
         auto ctxPtr = std::make_shared<ClientCryptoContext>(clientCtx->keyCtxPtr());
-        auto pkg = QueryEncryptor(ctxPtr).encrypt(stmt, physPlan, schema, meta);
+        auto pkg = stmt.joins.empty()
+            ? QueryEncryptor(ctxPtr).encrypt(stmt, physPlan, schema, meta)
+            : QueryEncryptor(ctxPtr).encrypt(stmt, physPlan, catalog, meta);
         pkg.queryId = "e2e-test";
 
         QueryValidator(catalog, *serverCtx).validate(pkg);
@@ -172,6 +186,12 @@ class E2ETest : public ::testing::Test {
 protected:
     E2ECtx ctx_;
     void SetUp() override { ctx_ = E2ECtx::create(); }
+};
+
+class JoinE2ETest : public ::testing::Test {
+protected:
+    E2ECtx ctx_;
+    void SetUp() override { ctx_ = E2ECtx::create(1); }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -298,6 +318,22 @@ TEST(ParserTest, MultilineQuery) {
     EXPECT_EQ(stmt.whereClause->kind, ASTExprKind::And);
 }
 
+TEST(ParserTest, InnerJoinWithAliases) {
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT e.id, d.department_name FROM employees AS e "
+        "INNER JOIN departments AS d ON e.department_id = d.id "
+        "WHERE e.age > 5");
+    EXPECT_EQ(stmt.tableName, "employees");
+    EXPECT_EQ(stmt.tableAlias, "e");
+    ASSERT_EQ(stmt.joins.size(), 1u);
+    EXPECT_EQ(stmt.joins[0].rightTable.tableName, "departments");
+    EXPECT_EQ(stmt.joins[0].rightTable.alias, "d");
+    EXPECT_EQ(stmt.joins[0].condition->kind, ASTExprKind::Equal);
+    EXPECT_EQ(stmt.joins[0].condition->left->columnName, "e.department_id");
+    EXPECT_EQ(stmt.joins[0].condition->right->columnName, "d.id");
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SEMANTIC ANALYSIS TESTS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -364,6 +400,46 @@ TEST(SemanticTest, OverlongStringRejected) {
     SQLParser p;
     auto stmt = p.parse(
         "SELECT id FROM employees WHERE name = 'SixteenCharacters!'");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST(SemanticTest, JoinRequiresQualifiedColumns) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT e.id FROM employees e JOIN departments d "
+        "ON department_id = d.id");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST(SemanticTest, JoinRejectsUnknownAlias) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT e.id FROM employees e JOIN departments d "
+        "ON e.department_id = x.id");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST(SemanticTest, JoinRejectsUnknownTable) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT e.id FROM employees e JOIN missing d "
+        "ON e.department_id = d.id");
+    EXPECT_THROW(a.analyze(stmt), SemanticError);
+}
+
+TEST(SemanticTest, JoinRejectsNonEqualityCondition) {
+    Catalog cat = makeEmployeesCatalog();
+    SemanticAnalyzer a(cat);
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT e.id FROM employees e JOIN departments d "
+        "ON e.department_id > d.id");
     EXPECT_THROW(a.analyze(stmt), SemanticError);
 }
 
@@ -475,6 +551,28 @@ TEST_F(FHEFixture, ValidatorAcceptsValidPackage) {
     pkg.queryId = "test-002";
 
     EXPECT_NO_THROW(v.validate(pkg));
+}
+
+TEST_F(FHEFixture, JoinQueryPackageRoundTrip) {
+    Catalog cat = makeEmployeesCatalog();
+    SQLParser p;
+    auto stmt = p.parse(
+        "SELECT e.id, e.age, d.department_name FROM employees e "
+        "JOIN departments d ON e.department_id = d.id");
+    SemanticAnalyzer a(cat);
+    auto& schema = a.analyze(stmt);
+    auto plan = PhysicalPlanner().plan(*LogicalPlanner().plan(stmt, schema));
+    FHEParamsMeta meta;
+    meta.paramSetId = clientCtx_->paramSetId();
+    meta.slotCount = clientCtx_->slotCount();
+    auto ctxPtr = std::make_shared<ClientCryptoContext>(clientCtx_->keyCtxPtr());
+    auto pkg = QueryEncryptor(ctxPtr).encrypt(stmt, plan, cat, meta);
+    auto roundTrip = QueryPackage::deserialize(pkg.serialize());
+    EXPECT_TRUE(roundTrip.hasJoin);
+    EXPECT_EQ(roundTrip.tableAlias, "e");
+    EXPECT_EQ(roundTrip.joinedTableName, "departments");
+    EXPECT_EQ(roundTrip.joinLeftColumn, "e.department_id");
+    EXPECT_EQ(roundTrip.joinRightColumn, "d.id");
 }
 
 TEST_F(FHEFixture, ValidatorRejectsUnknownTable) {
@@ -759,6 +857,29 @@ TEST_F(E2ETest, StringInequality) {
     ASSERT_EQ(rows.size(), 9u);
     for (const auto& row : rows)
         EXPECT_NE(row.values.at("id"), 1);
+}
+
+TEST_F(JoinE2ETest, InnerJoin) {
+    auto rows = ctx_.runQuery(
+        "SELECT e.id, d.department_name FROM employees e "
+        "JOIN departments d ON e.department_id = d.id");
+    ASSERT_EQ(rows.size(), 10u);
+    EXPECT_EQ(rows[0].values.at("e.id"), 1);
+    EXPECT_EQ(rows[0].stringValues.at("d.department_name"), "Engineering");
+    EXPECT_EQ(rows[9].values.at("e.id"), 10);
+    EXPECT_EQ(rows[9].stringValues.at("d.department_name"), "Support");
+}
+
+TEST_F(JoinE2ETest, InnerJoinWithWhere) {
+    auto rows = ctx_.runQuery(
+        "SELECT e.id, e.age, d.department_name FROM employees e "
+        "JOIN departments d ON e.department_id = d.id "
+        "WHERE e.age > 5");
+    ASSERT_EQ(rows.size(), 6u);
+    for (const auto& row : rows) {
+        EXPECT_GT(row.values.at("e.age"), 5);
+        EXPECT_FALSE(row.stringValues.at("d.department_name").empty());
+    }
 }
 
 int main(int argc, char** argv) {

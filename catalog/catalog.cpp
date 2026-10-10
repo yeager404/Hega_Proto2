@@ -16,6 +16,13 @@ Catalog makeEmployeesCatalog() {
         {"name",          DataType::STRING, 16},
     };
     cat.registerTable(std::move(employees));
+    TableSchema departments;
+    departments.tableId = "departments";
+    departments.columns = {
+        {"id", DataType::INT64},
+        {"department_name", DataType::STRING, 16},
+    };
+    cat.registerTable(std::move(departments));
     return cat;
 }
 
